@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(docker compose *)",
+      "Bash(npm install *)",
+      "Bash(npx tsc *)",
+      "Bash(npm show *)",
+      "Bash(node -e \"const f = require\\('ffmpeg-static'\\); console.log\\(f\\)\")",
+      "Bash(node -e \"const f = require\\('ffprobe-static'\\); console.log\\(f.path\\)\")"
+    ]
+  }
+}

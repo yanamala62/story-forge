@@ -1,0 +1,69 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build outputs
+dist/
+build/
+out/
+.next/
+
+# TypeScript cache
+*.tsbuildinfo
+tsconfig.tsbuildinfo
+
+# Environment files
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# IDE
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Generated AI content (large files)
+generated/
+!generated/.gitkeep
+
+# Models (large binary files)
+models/
+!models/.gitkeep
+
+# Prisma
+packages/database/node_modules/
+packages/database/dist/
+
+# Coverage
+coverage/
+*.lcov
+.nyc_output/
+
+# Turbo
+.turbo/
+
+# Docker volumes
+docker/postgres/data/
+docker/redis/data/
+
+# Temp files
+tmp/
+temp/
+*.tmp

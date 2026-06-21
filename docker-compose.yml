@@ -1,0 +1,252 @@
+# =============================================================================
+# StoryForge AI — Full Production Stack
+# =============================================================================
+
+x-logging: &default-logging
+  driver: "json-file"
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+x-restart-policy: &restart-policy
+  restart: unless-stopped
+
+networks:
+  storyforge-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+volumes:
+  postgres_data:
+  redis_data:
+  ollama_data:
+  comfyui_models:
+  comfyui_output:
+  generated_content:
+  piper_models:
+
+services:
+  # ---------------------------------------------------------------------------
+  # Infrastructure
+  # ---------------------------------------------------------------------------
+  postgres:
+    image: postgres:16-alpine
+    <<: *restart-policy
+    logging: *default-logging
+    environment:
+      POSTGRES_USER: storyforge
+      POSTGRES_PASSWORD: storyforge_password
+      POSTGRES_DB: storyforge_db
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    ports:
+      - "5432:5432"
+    networks:
+      - storyforge-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U storyforge -d storyforge_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  redis:
+    image: redis:7-alpine
+    <<: *restart-policy
+    logging: *default-logging
+    command: >
+      redis-server
+      --requirepass storyforge_redis_password
+      --maxmemory 512mb
+      --maxmemory-policy allkeys-lru
+      --save 60 1
+      --loglevel warning
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - storyforge-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "storyforge_redis_password", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ---------------------------------------------------------------------------
+  # AI Services
+  # ---------------------------------------------------------------------------
+  ollama:
+    image: ollama/ollama:latest
+    <<: *restart-policy
+    logging: *default-logging
+    volumes:
+      - ollama_data:/root/.ollama
+    ports:
+      - "11434:11434"
+    networks:
+      - storyforge-net
+    environment:
+      - OLLAMA_KEEP_ALIVE=24h
+      - OLLAMA_NUM_PARALLEL=2
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    # Uncomment for NVIDIA GPU support:
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]
+
+  comfyui:
+    image: ghcr.io/ai-dock/comfyui:latest-cpu
+    <<: *restart-policy
+    logging: *default-logging
+    volumes:
+      - comfyui_models:/opt/ComfyUI/models
+      - comfyui_output:/opt/ComfyUI/output
+      - ./prompts/comfyui:/opt/ComfyUI/workflows:ro
+    ports:
+      - "8188:8188"
+    networks:
+      - storyforge-net
+    environment:
+      - DIRECT_ADDRESS=0.0.0.0
+      - DIRECT_ADDRESS_GET_HEADERS=true
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8188/system_stats"]
+      interval: 30s
+      timeout: 15s
+      retries: 5
+      start_period: 120s
+    # Uncomment for NVIDIA GPU support:
+    # image: ghcr.io/ai-dock/comfyui:latest-cuda-12.1.1-base
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]
+
+  # ---------------------------------------------------------------------------
+  # Application Services
+  # ---------------------------------------------------------------------------
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+      target: production
+    <<: *restart-policy
+    logging: *default-logging
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=postgresql://storyforge:storyforge_password@postgres:5432/storyforge_db
+      - REDIS_URL=redis://:storyforge_redis_password@redis:6379/0
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - COMFYUI_BASE_URL=http://comfyui:8188
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - storyforge-net
+    volumes:
+      - generated_content:/app/generated
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  worker:
+    build:
+      context: .
+      dockerfile: workers/queue-worker/Dockerfile
+      target: production
+    <<: *restart-policy
+    logging: *default-logging
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=postgresql://storyforge:storyforge_password@postgres:5432/storyforge_db
+      - REDIS_URL=redis://:storyforge_redis_password@redis:6379/0
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - COMFYUI_BASE_URL=http://comfyui:8188
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - storyforge-net
+    volumes:
+      - generated_content:/app/generated
+      - piper_models:/app/models/piper
+
+  scheduler:
+    build:
+      context: .
+      dockerfile: workers/scheduler/Dockerfile
+      target: production
+    <<: *restart-policy
+    logging: *default-logging
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=postgresql://storyforge:storyforge_password@postgres:5432/storyforge_db
+      - REDIS_URL=redis://:storyforge_redis_password@redis:6379/0
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - storyforge-net
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      target: production
+    <<: *restart-policy
+    logging: *default-logging
+    environment:
+      - VITE_API_URL=http://localhost:3000
+    ports:
+      - "3001:80"
+    depends_on:
+      - api
+    networks:
+      - storyforge-net
+
+  nginx:
+    image: nginx:alpine
+    <<: *restart-policy
+    logging: *default-logging
+    volumes:
+      - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./docker/nginx/conf.d:/etc/nginx/conf.d:ro
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - api
+      - web
+    networks:
+      - storyforge-net

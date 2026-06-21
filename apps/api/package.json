@@ -1,0 +1,53 @@
+{
+  "name": "@storyforge/api",
+  "version": "1.0.0",
+  "private": true,
+  "main": "./dist/index.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsx watch src/index.ts",
+    "start": "node dist/index.js",
+    "clean": "rimraf dist *.tsbuildinfo",
+    "type-check": "tsc --noEmit",
+    "lint": "eslint src --ext .ts",
+    "test": "jest --passWithNoTests",
+    "test:watch": "jest --watch"
+  },
+  "dependencies": {
+    "@storyforge/shared": "*",
+    "@storyforge/database": "*",
+    "@storyforge/story-agent": "*",
+    "@storyforge/prompt-agent": "*",
+    "@storyforge/image-agent": "*",
+    "@storyforge/narration-agent": "*",
+    "@storyforge/subtitle-agent": "*",
+    "@storyforge/video-agent": "*",
+    "express": "^4.21.2",
+    "express-async-errors": "^3.1.1",
+    "cors": "^2.8.5",
+    "helmet": "^8.0.0",
+    "compression": "^1.7.4",
+    "express-rate-limit": "^7.4.1",
+    "morgan": "^1.10.0",
+    "uuid": "^11.0.3",
+    "dotenv": "^16.4.7",
+    "swagger-ui-express": "^5.0.1",
+    "swagger-jsdoc": "^6.2.8",
+    "ioredis": "^5.4.1"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/cors": "^2.8.17",
+    "@types/compression": "^1.7.5",
+    "@types/morgan": "^1.9.9",
+    "@types/swagger-ui-express": "^4.1.6",
+    "@types/swagger-jsdoc": "^6.0.4",
+    "@types/node": "^22.10.5",
+    "@types/jest": "^29.5.14",
+    "rimraf": "^6.0.1",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.2.5"
+  }
+}

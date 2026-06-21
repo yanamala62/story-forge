@@ -1,0 +1,112 @@
+import { z } from 'zod';
+
+const environmentSchema = z.object({
+  NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
+  APP_PORT: z.coerce.number().int().positive().default(3000),
+  APP_HOST: z.string().default('0.0.0.0'),
+  APP_NAME: z.string().default('StoryForge AI'),
+  APP_VERSION: z.string().default('1.0.0'),
+  LOG_LEVEL: z.enum(['error', 'warn', 'info', 'http', 'debug']).default('info'),
+
+  DATABASE_URL: z.string().url(),
+  DATABASE_POOL_MIN: z.coerce.number().int().positive().default(2),
+  DATABASE_POOL_MAX: z.coerce.number().int().positive().default(10),
+
+  REDIS_HOST: z.string().default('localhost'),
+  REDIS_PORT: z.coerce.number().int().positive().default(6379),
+  REDIS_PASSWORD: z.string().optional(),
+  REDIS_DB: z.coerce.number().int().nonnegative().default(0),
+  REDIS_URL: z.string().optional(),
+
+  // LLM Provider: 'ollama' or 'openrouter'
+  LLM_PROVIDER: z.enum(['ollama', 'openrouter']).default('ollama'),
+
+  OLLAMA_BASE_URL: z.string().url().default('http://localhost:11434'),
+  OLLAMA_STORY_MODEL: z.string().default('qwen3:8b'),
+  OLLAMA_SEO_MODEL: z.string().default('llama3:8b'),
+  OLLAMA_TIMEOUT_MS: z.coerce.number().int().positive().default(120_000),
+  OLLAMA_MAX_RETRIES: z.coerce.number().int().positive().default(3),
+
+  // OpenRouter
+  OPENROUTER_API_KEY: z.string().optional(),
+  OPENROUTER_STORY_MODEL: z.string().default('qwen/qwen3-8b:free'),
+  OPENROUTER_SEO_MODEL: z.string().default('qwen/qwen3-8b:free'),
+  OPENROUTER_TIMEOUT_MS: z.coerce.number().int().positive().default(120_000),
+  OPENROUTER_MAX_RETRIES: z.coerce.number().int().positive().default(3),
+
+  COMFYUI_BASE_URL: z.string().url().default('http://localhost:8188'),
+  COMFYUI_TIMEOUT_MS: z.coerce.number().int().positive().default(300_000),
+  COMFYUI_MAX_RETRIES: z.coerce.number().int().positive().default(3),
+
+  PIPER_BINARY_PATH: z.string().default('piper'),
+  PIPER_MODEL_PATH: z.string().default('./models/piper/en_US-lessac-medium.onnx'),
+  PIPER_VOICE: z.string().default('en_US-lessac-medium'),
+  PIPER_SAMPLE_RATE: z.coerce.number().int().positive().default(22050),
+
+  WHISPER_MODEL: z.string().default('base.en'),
+  WHISPER_LANGUAGE: z.string().default('en'),
+  WHISPER_DEVICE: z.enum(['cpu', 'cuda']).default('cpu'),
+
+  FFMPEG_BINARY_PATH: z.string().default('ffmpeg'),
+  FFPROBE_BINARY_PATH: z.string().default('ffprobe'),
+  VIDEO_WIDTH: z.coerce.number().int().positive().default(1080),
+  VIDEO_HEIGHT: z.coerce.number().int().positive().default(1920),
+  VIDEO_FPS: z.coerce.number().int().positive().default(30),
+  VIDEO_CODEC: z.string().default('libx264'),
+  VIDEO_CRF: z.coerce.number().int().nonnegative().default(23),
+  AUDIO_CODEC: z.string().default('aac'),
+  AUDIO_BITRATE: z.string().default('128k'),
+
+  STORAGE_TYPE: z.enum(['local', 's3']).default('local'),
+  STORAGE_LOCAL_PATH: z.string().default('./generated'),
+  S3_ENDPOINT: z.string().optional(),
+  S3_ACCESS_KEY_ID: z.string().optional(),
+  S3_SECRET_ACCESS_KEY: z.string().optional(),
+  S3_BUCKET: z.string().optional(),
+  S3_REGION: z.string().optional(),
+  S3_PUBLIC_URL: z.string().optional(),
+
+  QUEUE_CONCURRENCY: z.coerce.number().int().positive().default(2),
+  QUEUE_MAX_RETRIES: z.coerce.number().int().positive().default(3),
+  QUEUE_RETRY_DELAY_MS: z.coerce.number().int().positive().default(5_000),
+  QUEUE_JOB_TIMEOUT_MS: z.coerce.number().int().positive().default(600_000),
+
+  SCHEDULE_INTERVAL_HOURS: z.coerce.number().int().positive().default(3),
+  SCHEDULE_ENABLED: z.coerce.boolean().default(true),
+  SCHEDULE_TIMEZONE: z.string().default('UTC'),
+
+  STORY_MAX_SCENES: z.coerce.number().int().positive().default(6),
+  STORY_EPISODE_DURATION_SECONDS: z.coerce.number().int().positive().default(40),
+  STORY_TARGET_AUDIENCE: z.string().default('13-35'),
+  STORY_IMAGE_STYLE: z.string().default('anime'),
+
+  JWT_SECRET: z.string().min(32).default('change_this_to_a_random_256_bit_secret_key_here!!'),
+  JWT_EXPIRES_IN: z.string().default('7d'),
+  JWT_REFRESH_EXPIRES_IN: z.string().default('30d'),
+
+  CORS_ORIGINS: z.string().default('http://localhost:5173'),
+});
+
+export type Environment = z.infer<typeof environmentSchema>;
+
+let _env: Environment | null = null;
+
+export function getEnv(): Environment {
+  if (_env) return _env;
+
+  const result = environmentSchema.safeParse(process.env);
+
+  if (!result.success) {
+    const missing = result.error.issues
+      .map((i) => `  - ${i.path.join('.')}: ${i.message}`)
+      .join('\n');
+    throw new Error(`Invalid environment configuration:\n${missing}`);
+  }
+
+  _env = result.data;
+  return _env;
+}
+
+export function resetEnvCache(): void {
+  _env = null;
+}

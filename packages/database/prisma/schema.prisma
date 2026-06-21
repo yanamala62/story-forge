@@ -1,0 +1,527 @@
+// =============================================================================
+// StoryForge AI — Prisma Schema
+// Database: PostgreSQL 16
+// Convention: camelCase in TypeScript, snake_case in PostgreSQL (@map)
+// =============================================================================
+
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// =============================================================================
+// USERS
+// =============================================================================
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  username  String   @unique
+  password  String
+  role      UserRole @default(USER)
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  stories  Story[]
+  settings Setting[]
+
+  @@index([email])
+  @@index([isActive])
+  @@map("users")
+}
+
+enum UserRole {
+  ADMIN
+  USER
+  VIEWER
+}
+
+// =============================================================================
+// STORIES
+// =============================================================================
+
+model Story {
+  id             String     @id @default(uuid())
+  userId         String     @map("user_id")
+  title          String
+  genre          StoryGenre
+  style          ImageStyle @default(ANIME)
+  synopsis       String     @db.Text
+  targetAudience String     @default("13-35") @map("target_audience")
+  isActive       Boolean    @default(true) @map("is_active")
+  episodeCount   Int        @default(0) @map("episode_count")
+  createdAt      DateTime   @default(now()) @map("created_at")
+  updatedAt      DateTime   @updatedAt @map("updated_at")
+
+  user       User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  episodes   Episode[]
+  characters Character[]
+  locations  Location[]
+  memory     StoryMemory?
+
+  @@index([userId])
+  @@index([isActive])
+  @@index([genre])
+  @@map("stories")
+}
+
+enum StoryGenre {
+  ACTION
+  ADVENTURE
+  ROMANCE
+  HORROR
+  MYSTERY
+  FANTASY
+  SCI_FI
+  DRAMA
+  COMEDY
+  THRILLER
+}
+
+enum ImageStyle {
+  ANIME
+  CARTOON
+  CINEMATIC
+  REALISTIC
+}
+
+model StoryMemory {
+  id         String   @id @default(uuid())
+  storyId    String   @unique @map("story_id")
+  timeline   Json     @default("[]")
+  worldState Json     @default("{}") @map("world_state")
+  plotPoints Json     @default("[]") @map("plot_points")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  story Story @relation(fields: [storyId], references: [id], onDelete: Cascade)
+
+  @@map("story_memory")
+}
+
+// =============================================================================
+// EPISODES
+// =============================================================================
+
+model Episode {
+  id              String        @id @default(uuid())
+  storyId         String        @map("story_id")
+  episodeNumber   Int           @map("episode_number")
+  title           String
+  content         String        @db.Text
+  hook            String        @db.Text
+  cliffhanger     String        @db.Text
+  duration        Int           @default(40)
+  status          EpisodeStatus @default(PENDING)
+  processingError String?       @db.Text @map("processing_error")
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+
+  story        Story         @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  scenes       Scene[]
+  audioFile    AudioFile?
+  subtitleFile SubtitleFile?
+  video        Video?
+  prompts      Prompt[]
+
+  @@unique([storyId, episodeNumber])
+  @@index([storyId])
+  @@index([status])
+  @@map("episodes")
+}
+
+enum EpisodeStatus {
+  PENDING
+  GENERATING_STORY
+  GENERATING_SCENES
+  GENERATING_PROMPTS
+  GENERATING_IMAGES
+  GENERATING_AUDIO
+  GENERATING_SUBTITLES
+  COMPOSING_VIDEO
+  GENERATING_SEO
+  UPLOADING
+  PUBLISHED
+  FAILED
+}
+
+// =============================================================================
+// SCENES
+// =============================================================================
+
+model Scene {
+  id          String   @id @default(uuid())
+  episodeId   String   @map("episode_id")
+  sceneNumber Int      @map("scene_number")
+  description String   @db.Text
+  narration   String   @db.Text
+  mood        String
+  duration    Int
+  characters  Json     @default("[]")
+  location    String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  episode Episode         @relation(fields: [episodeId], references: [id], onDelete: Cascade)
+  prompt  Prompt?
+  image   GeneratedImage?
+
+  @@unique([episodeId, sceneNumber])
+  @@index([episodeId])
+  @@map("scenes")
+}
+
+// =============================================================================
+// CHARACTERS & LOCATIONS
+// =============================================================================
+
+model Character {
+  id                String   @id @default(uuid())
+  storyId           String   @map("story_id")
+  name              String
+  description       String   @db.Text
+  visualDescription String   @db.Text @map("visual_description")
+  personality       String   @db.Text
+  role              String
+  appearances       Int      @default(0)
+  isAlive           Boolean  @default(true) @map("is_alive")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  story Story @relation(fields: [storyId], references: [id], onDelete: Cascade)
+
+  @@unique([storyId, name])
+  @@index([storyId])
+  @@map("characters")
+}
+
+model Location {
+  id                String   @id @default(uuid())
+  storyId           String   @map("story_id")
+  name              String
+  description       String   @db.Text
+  visualDescription String   @db.Text @map("visual_description")
+  appearances       Int      @default(0)
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  story Story @relation(fields: [storyId], references: [id], onDelete: Cascade)
+
+  @@unique([storyId, name])
+  @@index([storyId])
+  @@map("locations")
+}
+
+// =============================================================================
+// PROMPTS & IMAGES
+// =============================================================================
+
+model Prompt {
+  id             String     @id @default(uuid())
+  episodeId      String     @map("episode_id")
+  sceneId        String?    @unique @map("scene_id")
+  type           PromptType @default(SCENE)
+  positivePrompt String     @db.Text @map("positive_prompt")
+  negativePrompt String     @default("") @db.Text @map("negative_prompt")
+  style          String
+  characters     Json       @default("[]")
+  location       String?
+  mood           String?
+  model          String     @default("stable-diffusion")
+  createdAt      DateTime   @default(now()) @map("created_at")
+  updatedAt      DateTime   @updatedAt @map("updated_at")
+
+  episode Episode          @relation(fields: [episodeId], references: [id], onDelete: Cascade)
+  scene   Scene?           @relation(fields: [sceneId], references: [id])
+  images  GeneratedImage[]
+
+  @@index([episodeId])
+  @@map("prompts")
+}
+
+enum PromptType {
+  SCENE
+  CHARACTER
+  THUMBNAIL
+}
+
+model GeneratedImage {
+  id        String      @id @default(uuid())
+  promptId  String      @map("prompt_id")
+  sceneId   String?     @unique @map("scene_id")
+  filename  String
+  localPath String      @map("local_path")
+  s3Key     String?     @map("s3_key")
+  s3Url     String?     @map("s3_url")
+  width     Int         @default(1080)
+  height    Int         @default(1920)
+  seed      Int?
+  model     String
+  status    ImageStatus @default(PENDING)
+  createdAt DateTime    @default(now()) @map("created_at")
+  updatedAt DateTime    @updatedAt @map("updated_at")
+
+  prompt Prompt @relation(fields: [promptId], references: [id], onDelete: Cascade)
+  scene  Scene? @relation(fields: [sceneId], references: [id])
+
+  @@index([promptId])
+  @@index([status])
+  @@map("generated_images")
+}
+
+enum ImageStatus {
+  PENDING
+  GENERATING
+  COMPLETED
+  FAILED
+}
+
+// =============================================================================
+// AUDIO FILES
+// =============================================================================
+
+model AudioFile {
+  id         String      @id @default(uuid())
+  episodeId  String      @unique @map("episode_id")
+  filename   String
+  localPath  String      @map("local_path")
+  s3Key      String?     @map("s3_key")
+  s3Url      String?     @map("s3_url")
+  duration   Float
+  voice      String      @default("en_US-lessac-medium")
+  sampleRate Int         @default(22050) @map("sample_rate")
+  status     AudioStatus @default(PENDING)
+  createdAt  DateTime    @default(now()) @map("created_at")
+  updatedAt  DateTime    @updatedAt @map("updated_at")
+
+  episode Episode @relation(fields: [episodeId], references: [id], onDelete: Cascade)
+
+  @@map("audio_files")
+}
+
+enum AudioStatus {
+  PENDING
+  GENERATING
+  COMPLETED
+  FAILED
+}
+
+// =============================================================================
+// SUBTITLE FILES
+// =============================================================================
+
+model SubtitleFile {
+  id        String         @id @default(uuid())
+  episodeId String         @unique @map("episode_id")
+  filename  String
+  localPath String         @map("local_path")
+  s3Key     String?        @map("s3_key")
+  s3Url     String?        @map("s3_url")
+  language  String         @default("en")
+  format    SubtitleFormat @default(SRT)
+  status    SubtitleStatus @default(PENDING)
+  createdAt DateTime       @default(now()) @map("created_at")
+  updatedAt DateTime       @updatedAt @map("updated_at")
+
+  episode Episode @relation(fields: [episodeId], references: [id], onDelete: Cascade)
+
+  @@map("subtitle_files")
+}
+
+enum SubtitleFormat {
+  SRT
+  VTT
+  ASS
+}
+
+enum SubtitleStatus {
+  PENDING
+  GENERATING
+  COMPLETED
+  FAILED
+}
+
+// =============================================================================
+// VIDEOS
+// =============================================================================
+
+model Video {
+  id            String      @id @default(uuid())
+  episodeId     String      @unique @map("episode_id")
+  filename      String
+  localPath     String      @map("local_path")
+  s3Key         String?     @map("s3_key")
+  s3Url         String?     @map("s3_url")
+  duration      Float
+  width         Int         @default(1080)
+  height        Int         @default(1920)
+  fps           Int         @default(30)
+  codec         String      @default("h264")
+  fileSize      BigInt      @map("file_size")
+  thumbnailPath String?     @map("thumbnail_path")
+  status        VideoStatus @default(PENDING)
+  createdAt     DateTime    @default(now()) @map("created_at")
+  updatedAt     DateTime    @updatedAt @map("updated_at")
+
+  episode     Episode      @relation(fields: [episodeId], references: [id], onDelete: Cascade)
+  seoMetadata SeoMetadata?
+  uploads     Upload[]
+
+  @@index([status])
+  @@map("videos")
+}
+
+enum VideoStatus {
+  PENDING
+  COMPOSING
+  COMPLETED
+  FAILED
+}
+
+// =============================================================================
+// SEO METADATA
+// =============================================================================
+
+model SeoMetadata {
+  id          String   @id @default(uuid())
+  videoId     String   @unique @map("video_id")
+  title       String
+  description String   @db.Text
+  tags        String[]
+  hashtags    String[]
+  category    String   @default("Entertainment")
+  language    String   @default("en")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  video Video @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  @@map("seo_metadata")
+}
+
+// =============================================================================
+// UPLOADS
+// =============================================================================
+
+model Upload {
+  id              String       @id @default(uuid())
+  videoId         String       @map("video_id")
+  platform        Platform
+  platformVideoId String?      @map("platform_video_id")
+  platformUrl     String?      @map("platform_url")
+  status          UploadStatus @default(PENDING)
+  error           String?      @db.Text
+  publishedAt     DateTime?    @map("published_at")
+  createdAt       DateTime     @default(now()) @map("created_at")
+  updatedAt       DateTime     @updatedAt @map("updated_at")
+
+  video     Video       @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  analytics Analytics[]
+
+  @@index([videoId])
+  @@index([platform])
+  @@index([status])
+  @@map("uploads")
+}
+
+enum Platform {
+  YOUTUBE
+  INSTAGRAM
+  TIKTOK
+  FACEBOOK
+}
+
+enum UploadStatus {
+  PENDING
+  UPLOADING
+  PUBLISHED
+  FAILED
+  SCHEDULED
+}
+
+// =============================================================================
+// ANALYTICS
+// =============================================================================
+
+model Analytics {
+  id           String   @id @default(uuid())
+  uploadId     String   @map("upload_id")
+  views        Int      @default(0)
+  likes        Int      @default(0)
+  comments     Int      @default(0)
+  shares       Int      @default(0)
+  saves        Int      @default(0)
+  watchTime    Float    @default(0) @map("watch_time")
+  avgRetention Float    @default(0) @map("avg_retention")
+  ctr          Float    @default(0)
+  impressions  Int      @default(0)
+  collectedAt  DateTime @default(now()) @map("collected_at")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  upload Upload @relation(fields: [uploadId], references: [id], onDelete: Cascade)
+
+  @@index([uploadId])
+  @@index([collectedAt])
+  @@map("analytics")
+}
+
+// =============================================================================
+// SETTINGS
+// =============================================================================
+
+model Setting {
+  id        String   @id @default(uuid())
+  userId    String?  @map("user_id")
+  key       String
+  value     Json
+  isSystem  Boolean  @default(false) @map("is_system")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, key])
+  @@index([key])
+  @@map("settings")
+}
+
+// =============================================================================
+// QUEUE JOBS (BullMQ audit log)
+// =============================================================================
+
+model QueueJob {
+  id          String    @id @default(uuid())
+  jobId       String    @unique @map("job_id")
+  queue       String
+  name        String
+  data        Json
+  status      JobStatus @default(PENDING)
+  attempts    Int       @default(0)
+  maxAttempts Int       @default(3) @map("max_attempts")
+  error       String?   @db.Text
+  result      Json?
+  startedAt   DateTime? @map("started_at")
+  completedAt DateTime? @map("completed_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  @@index([queue])
+  @@index([status])
+  @@index([jobId])
+  @@map("queue_jobs")
+}
+
+enum JobStatus {
+  PENDING
+  ACTIVE
+  COMPLETED
+  FAILED
+  DELAYED
+  PAUSED
+}
