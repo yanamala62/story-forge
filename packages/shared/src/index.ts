@@ -11,3 +11,4 @@ export * from './utils/errors.js';
 export * from './utils/retry.js';
 export * from './utils/config.js';
 export * from './utils/id.js';
+export * from './utils/pipeline-errors.js';

@@ -34,18 +34,18 @@ router.get('/', async (_req: Request, res: Response) => {
   const services: Record<string, ServiceHealth> = {
     database: resolveServiceHealth(dbHealthy),
     redis: resolveServiceHealth(redisHealthy),
+    // Ollama and ComfyUI are optional — not used in current config (OpenRouter + Pollinations)
     ollama: resolveServiceHealth(ollamaHealthy),
     comfyui: resolveServiceHealth(comfyuiHealthy),
   };
 
-  const allUp = Object.values(services).every((s) => s.status === 'up');
-  const anyDown = Object.values(services).some((s) => s.status === 'down');
+  // Only critical services (DB + Redis) determine overall health
+  const criticalDown =
+    services['database']?.status === 'down' || services['redis']?.status === 'down';
+  const allCriticalUp =
+    services['database']?.status === 'up' && services['redis']?.status === 'up';
 
-  const overallStatus: HealthCheckResponse['status'] = allUp
-    ? 'healthy'
-    : anyDown
-      ? 'degraded'
-      : 'healthy';
+  const overallStatus: HealthCheckResponse['status'] = allCriticalUp ? 'healthy' : 'degraded';
 
   const payload: ApiResponse<HealthCheckResponse> = {
     success: true,
@@ -60,7 +60,7 @@ router.get('/', async (_req: Request, res: Response) => {
     requestId: _req.requestId,
   };
 
-  const statusCode = anyDown ? 503 : 200;
+  const statusCode = criticalDown ? 503 : 200;
   res.status(statusCode).json(payload);
 
   logger.debug('Health check completed', {

@@ -4,9 +4,17 @@ import { transcribeWithWhisper } from './providers/whisper.provider.js';
 
 const logger = createLogger('subtitle-agent');
 
+// Maps ContentLanguage enum values to BCP-47 codes Whisper understands
+const WHISPER_LANG: Record<string, string> = {
+  EN: 'en',
+  HI: 'hi',
+  TE: 'te',
+};
+
 export interface GenerateSubtitlesInput {
   episodeId: string;
   audioPath: string;
+  language?: string;
   modelSize?: string;
 }
 
@@ -29,19 +37,25 @@ export class SubtitleAgentService {
 
   async generateSubtitles(input: GenerateSubtitlesInput): Promise<GenerateSubtitlesResult> {
     const { episodeId, audioPath } = input;
+    const language = input.language ?? 'EN';
     const modelSize = input.modelSize ?? this.whisperModel;
+    const whisperLang = WHISPER_LANG[language] ?? 'en';
 
     logger.info('Starting subtitle generation', {
       episodeId,
       audioPath,
+      language,
+      whisperLang,
       model: modelSize,
     });
 
     const filename = 'subtitles.srt';
+    // Language-prefixed output path: generated/subtitles/<lang>/<episodeId>/subtitles.srt
     const outputPath = join(
       process.cwd(),
       this.storageBasePath,
       'subtitles',
+      language.toLowerCase(),
       episodeId,
       filename,
     );
@@ -51,11 +65,12 @@ export class SubtitleAgentService {
         audioPath,
         outputSrtPath: outputPath,
         modelSize,
-        language: 'en',
+        language: whisperLang,
       });
 
       logger.info('Subtitle generation complete', {
         episodeId,
+        language,
         entryCount: result.entryCount,
         sizeBytes: result.sizeBytes,
       });
@@ -64,7 +79,7 @@ export class SubtitleAgentService {
         localPath: result.srtPath,
         filename,
         entryCount: result.entryCount,
-        language: 'en',
+        language: whisperLang,
       };
     } catch (error) {
       throw new AgentError(

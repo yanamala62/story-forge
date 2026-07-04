@@ -41,6 +41,9 @@ export class StoryAgentService {
         apiKey: this.env.OPENROUTER_API_KEY ?? '',
         timeoutMs: this.env.OPENROUTER_TIMEOUT_MS,
         maxRetries: this.env.OPENROUTER_MAX_RETRIES,
+        fallbackModels: this.env.OPENROUTER_FALLBACK_MODELS.split(',')
+          .map((m) => m.trim())
+          .filter(Boolean),
       },
     });
 
@@ -108,6 +111,7 @@ export class StoryAgentService {
       storyTitle: story.title,
       genre: story.genre as StoryGenre,
       style: story.style as ImageStyle,
+      language: String(story.language ?? 'EN'),
       synopsis: story.synopsis,
       episodeNumber,
       characters: existingMemory.characters,

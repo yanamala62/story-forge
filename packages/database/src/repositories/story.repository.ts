@@ -1,4 +1,4 @@
-import type { Story, Character, StoryMemory, Prisma } from '@prisma/client';
+import type { Story, Character, StoryMemory, ContentLanguage, Prisma } from '@prisma/client';
 import { BaseRepository, type FindManyOptions, type PaginatedResult } from './base.repository.js';
 
 export interface CreateStoryInput {
@@ -6,6 +6,7 @@ export interface CreateStoryInput {
   title: string;
   genre: Prisma.EnumStoryGenreFilter['equals'];
   style?: Prisma.EnumImageStyleFilter['equals'];
+  language?: ContentLanguage;
   synopsis: string;
   targetAudience?: string;
 }
@@ -34,6 +35,7 @@ export class StoryRepository extends BaseRepository {
         title: input.title,
         genre: input.genre as Story['genre'],
         style: (input.style ?? 'ANIME') as Story['style'],
+        language: input.language ?? 'EN',
         synopsis: input.synopsis,
         targetAudience: input.targetAudience ?? '13-35',
         memory: {
@@ -91,6 +93,20 @@ export class StoryRepository extends BaseRepository {
       where: { isActive: true },
       orderBy: { updatedAt: 'asc' },
     });
+  }
+
+  async findAllActive(options: FindManyOptions = {}): Promise<PaginatedResult<Story>> {
+    const { skip, take } = this.buildPagination(options);
+    const [data, total] = await Promise.all([
+      this.db.story.findMany({
+        where: { isActive: true },
+        orderBy: options.orderBy ?? { updatedAt: 'desc' },
+        skip,
+        take,
+      }),
+      this.db.story.count({ where: { isActive: true } }),
+    ]);
+    return this.buildPaginatedResult(data, total, options);
   }
 
   async update(id: string, input: UpdateStoryInput): Promise<Story> {

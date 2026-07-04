@@ -10,6 +10,7 @@ export interface GenerateImageInput {
   positivePrompt: string;
   negativePrompt: string;
   seed: number;
+  language?: string;
 }
 
 export interface GenerateImageResult {
@@ -34,10 +35,13 @@ export class ImageAgentService {
 
   async generateImage(input: GenerateImageInput): Promise<GenerateImageResult> {
     const filename = `scene-${String(input.sceneNumber).padStart(2, '0')}.png`;
+    const lang = (input.language ?? 'EN').toLowerCase();
+    // Language-prefixed path: generated/images/<lang>/<episodeId>/scene-01.png
     const outputPath = join(
       process.cwd(),
       this.storageBasePath,
       'images',
+      lang,
       input.episodeId,
       filename,
     );

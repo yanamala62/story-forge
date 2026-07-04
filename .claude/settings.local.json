@@ -6,7 +6,13 @@
       "Bash(npx tsc *)",
       "Bash(npm show *)",
       "Bash(node -e \"const f = require\\('ffmpeg-static'\\); console.log\\(f\\)\")",
-      "Bash(node -e \"const f = require\\('ffprobe-static'\\); console.log\\(f.path\\)\")"
+      "Bash(node -e \"const f = require\\('ffprobe-static'\\); console.log\\(f.path\\)\")",
+      "Bash(curl -s \"http://localhost:3000/api/episodes/962c4526-174e-4ab2-8905-70deaa5a29ba/images\")",
+      "Read(//tmp/**)",
+      "Bash(find \"/c/Users/lenovo/AppData/Local/Temp/claude/d--project-StoryForge-AI\" -iname \"b2eu2e21t*\" 2>/dev/null)",
+      "Read(//c/Users/lenovo/AppData/Local/Temp/claude/d--project-StoryForge-AI/**)",
+      "Bash(ls -la /tmp/ 2>&1 | head -20; echo \"---\"; cat /tmp/manual-trigger-test.log 2>&1 | tail -150)",
+      "Bash(node -e ' *)"
     ]
   }
 }

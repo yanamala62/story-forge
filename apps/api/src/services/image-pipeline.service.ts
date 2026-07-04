@@ -97,12 +97,14 @@ export const ImagePipelineService = {
 
     const results: ImagePipelineResult['generatedImages'] = [];
 
+    const storyLanguage = String(story.language ?? 'EN');
     const imageInputs = promptData.map((p, i) => ({
       episodeId,
       sceneNumber: p.sceneNumber,
       positivePrompt: p.positivePrompt,
       negativePrompt: p.negativePrompt,
       seed: p.seed,
+      language: storyLanguage,
     }));
 
     const imageResults = await imageAgent.generateImagesForEpisode(

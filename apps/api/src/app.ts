@@ -17,6 +17,11 @@ import { imagesRouter } from './routes/images.route.js';
 import { narrationRouter } from './routes/narration.route.js';
 import { subtitlesRouter } from './routes/subtitles.route.js';
 import { videoRouter } from './routes/video.route.js';
+import { seoRouter } from './routes/seo.route.js';
+import { uploadRouter } from './routes/upload.route.js';
+import { pipelineRouter } from './routes/pipeline.route.js';
+import { schedulerRouter } from './routes/scheduler.route.js';
+import { analyticsRouter } from './routes/analytics.route.js';
 
 export function createApp(): Application {
   const app = express();
@@ -41,8 +46,12 @@ export function createApp(): Application {
   // CORS
   app.use(cors(corsOptions));
 
-  // Compression
-  app.use(compression());
+  // Compression — skip SSE routes, which must stream uncompressed/unbuffered
+  app.use(
+    compression({
+      filter: (req, res) => (req.path.includes('/pipeline/logs/stream') ? false : compression.filter(req, res)),
+    }),
+  );
 
   // Body parsing
   app.use(express.json({ limit: '10mb' }));
@@ -70,6 +79,11 @@ export function createApp(): Application {
   app.use('/api', narrationRouter);
   app.use('/api', subtitlesRouter);
   app.use('/api', videoRouter);
+  app.use('/api', seoRouter);
+  app.use('/api', uploadRouter);
+  app.use('/api', pipelineRouter);
+  app.use('/api', schedulerRouter);
+  app.use('/api', analyticsRouter);
 
   // 404 handler
   app.use(notFoundMiddleware);

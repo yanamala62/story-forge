@@ -82,18 +82,16 @@ router.get('/', async (req: Request, res: Response) => {
   const page = Number(req.query['page'] ?? 1);
   const limit = Number(req.query['limit'] ?? 20);
 
-  const result = await StoryService.listStories(SYSTEM_USER_ID, page, limit);
+  // Single-operator mode — list all active stories regardless of userId
+  const result = await StoryService.listAllStories(page, limit);
 
   const response: ApiResponse = {
     success: true,
-    data: result.data,
-    meta: {
+    data: {
+      data: result.data,
+      total: result.total,
       page: result.page,
       limit: result.limit,
-      total: result.total,
-      totalPages: result.totalPages,
-      hasNext: result.hasNext,
-      hasPrev: result.hasPrev,
     },
     timestamp: new Date().toISOString(),
     requestId: req.requestId,

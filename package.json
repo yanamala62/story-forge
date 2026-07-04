@@ -10,7 +10,9 @@
     "workers/*"
   ],
   "scripts": {
-    "dev": "turbo run dev --parallel",
+    "start": "docker compose -f docker-compose.dev.yml up -d --wait postgres redis && node scripts/db-setup.cjs && turbo run dev --filter=@storyforge/api --filter=@storyforge/web",
+    "dev": "turbo run dev --filter=@storyforge/api --filter=@storyforge/web",
+    "dev:all": "turbo run dev",
     "build": "turbo run build",
     "test": "turbo run test",
     "lint": "turbo run lint",

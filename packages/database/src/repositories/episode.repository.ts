@@ -123,7 +123,7 @@ export class EpisodeRepository extends BaseRepository {
   async updateStatus(
     id: string,
     status: EpisodeStatus,
-    processingError?: string,
+    processingError?: string | null,
   ): Promise<Episode> {
     return this.db.episode.update({
       where: { id },
@@ -152,6 +152,28 @@ export class EpisodeRepository extends BaseRepository {
       where: { status: 'FAILED' },
       orderBy: { updatedAt: 'desc' },
       take: 20,
+    });
+  }
+
+  /** Returns the most recent episode for a story that is currently being processed. */
+  async findInFlightEpisode(storyId: string): Promise<Episode | null> {
+    return this.db.episode.findFirst({
+      where: {
+        storyId,
+        status: {
+          notIn: ['PENDING', 'PUBLISHED', 'FAILED'],
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  /** Returns the most recent FAILED episode for a story, used by the scheduler for auto-retry. */
+  async findLatestFailedEpisode(storyId: string): Promise<EpisodeWithScenes | null> {
+    return this.db.episode.findFirst({
+      where: { storyId, status: 'FAILED' },
+      orderBy: { episodeNumber: 'desc' },
+      include: { scenes: { orderBy: { sceneNumber: 'asc' } } },
     });
   }
 }

@@ -104,15 +104,15 @@ export enum JobStatus {
 }
 
 export enum QueueName {
-  EPISODE_PIPELINE = 'episode:pipeline',
-  STORY_GENERATION = 'story:generation',
-  SCENE_GENERATION = 'scene:generation',
-  PROMPT_GENERATION = 'prompt:generation',
-  IMAGE_GENERATION = 'image:generation',
-  NARRATION_GENERATION = 'narration:generation',
-  SUBTITLE_GENERATION = 'subtitle:generation',
-  VIDEO_COMPOSITION = 'video:composition',
-  SEO_GENERATION = 'seo:generation',
+  EPISODE_PIPELINE = 'episode-pipeline',
+  STORY_GENERATION = 'story-generation',
+  SCENE_GENERATION = 'scene-generation',
+  PROMPT_GENERATION = 'prompt-generation',
+  IMAGE_GENERATION = 'image-generation',
+  NARRATION_GENERATION = 'narration-generation',
+  SUBTITLE_GENERATION = 'subtitle-generation',
+  VIDEO_COMPOSITION = 'video-composition',
+  SEO_GENERATION = 'seo-generation',
   UPLOAD = 'upload',
   ANALYTICS = 'analytics',
 }

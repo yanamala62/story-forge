@@ -11,6 +11,7 @@ export interface ComposeEpisodeVideoInput {
   imagePaths: string[];
   audioPath: string;
   subtitlePath: string;
+  language?: string;
 }
 
 export interface ComposeEpisodeVideoResult {
@@ -67,7 +68,9 @@ export class VideoAgentService {
     logger.info('Starting video composition', { episodeId, imageCount: imagePaths.length });
 
     const filename = 'episode.mp4';
-    const outputDir = join(process.cwd(), this.storageBasePath, 'video', episodeId);
+    const lang = (input.language ?? 'EN').toLowerCase();
+    // Language-prefixed path: generated/video/<lang>/<episodeId>/episode.mp4
+    const outputDir = join(process.cwd(), this.storageBasePath, 'video', lang, episodeId);
     const outputPath = join(outputDir, filename);
     const thumbnailPath = join(outputDir, 'thumbnail.jpg');
 

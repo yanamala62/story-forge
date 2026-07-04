@@ -5,12 +5,14 @@ import {
   SubtitleRepository,
   VideoRepository,
   ImageRepository,
+  StoryRepository,
 } from '@storyforge/database';
 import { VideoAgentService } from '@storyforge/video-agent';
 
 const logger = createLogger('video-pipeline');
 
 const episodeRepo = new EpisodeRepository();
+const storyRepo = new StoryRepository();
 const audioRepo = new AudioRepository();
 const subtitleRepo = new SubtitleRepository();
 const imageRepo = new ImageRepository();
@@ -35,6 +37,11 @@ export const VideoPipelineService = {
 
     const episode = await episodeRepo.findById(episodeId);
     if (!episode) throw new NotFoundError('Episode', episodeId);
+
+    const story = await storyRepo.findById(episode.storyId);
+    // Cast through unknown — IDE shows stale types until language server restarts,
+    // but tsc and runtime both see the regenerated Prisma client correctly.
+    const language = String((story as unknown as { language?: string })?.language ?? 'EN');
 
     // Get narration audio
     const audioFile = await audioRepo.findByEpisodeId(episodeId);
@@ -61,6 +68,7 @@ export const VideoPipelineService = {
       imagePaths: images.map((img) => img.localPath),
       audioPath: audioFile.localPath,
       subtitlePath: subtitleFile.localPath,
+      language,
     });
 
     await videoRepo.upsert({

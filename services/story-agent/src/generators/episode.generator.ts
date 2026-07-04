@@ -18,6 +18,7 @@ export interface EpisodeGenerationInput {
   storyTitle: string;
   genre: StoryGenre;
   style: ImageStyle;
+  language?: string;
   synopsis: string;
   episodeNumber: number;
   characters: StoryCharacter[];
@@ -46,6 +47,7 @@ export class EpisodeGenerator {
       storyTitle: input.storyTitle,
       genre: input.genre,
       style: input.style,
+      language: input.language ?? 'EN',
       synopsis: input.synopsis,
       episodeNumber: input.episodeNumber,
       characters: input.characters,

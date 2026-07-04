@@ -22,6 +22,7 @@ export interface CreateStoryDto {
   title: string;
   genre: string;
   style?: string;
+  language?: string;
   synopsis: string;
   targetAudience?: string;
   initialCharacters?: Array<{
@@ -45,11 +46,15 @@ export const StoryService = {
       throw new ValidationError(`Invalid genre. Must be one of: ${validGenres.join(', ')}`);
     }
 
+    const validLanguages = ['EN', 'HI', 'TE'];
+    const lang = dto.language?.toUpperCase() ?? 'EN';
+
     const story = await storyRepo.create({
       userId: dto.userId,
       title: dto.title,
       genre,
       style: (dto.style?.toUpperCase() ?? 'ANIME') as ImageStyle,
+      language: (validLanguages.includes(lang) ? lang : 'EN') as 'EN' | 'HI' | 'TE',
       synopsis: dto.synopsis,
       targetAudience: dto.targetAudience ?? '13-35',
     });
@@ -73,6 +78,10 @@ export const StoryService = {
 
   async listStories(userId: string, page = 1, limit = 20) {
     return storyRepo.findByUserId(userId, { page, limit });
+  },
+
+  async listAllStories(page = 1, limit = 20) {
+    return storyRepo.findAllActive({ page, limit });
   },
 
   async generateEpisode(storyId: string) {

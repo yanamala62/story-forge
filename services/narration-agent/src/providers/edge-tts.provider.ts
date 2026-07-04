@@ -8,6 +8,7 @@ const execFileAsync = promisify(execFile);
 const logger = createLogger('edge-tts-provider');
 
 export const EDGE_TTS_VOICES = {
+  // English
   'en-US-JennyNeural': 'Jenny (Female, US, warm & natural)',
   'en-US-GuyNeural': 'Guy (Male, US, confident)',
   'en-US-AriaNeural': 'Aria (Female, US, newscast)',
@@ -15,9 +16,22 @@ export const EDGE_TTS_VOICES = {
   'en-US-NancyNeural': 'Nancy (Female, US, pleasant)',
   'en-GB-SoniaNeural': 'Sonia (Female, UK, clear)',
   'en-AU-NatashaNeural': 'Natasha (Female, AU, friendly)',
+  // Hindi
+  'hi-IN-SwaraNeural': 'Swara (Female, Hindi, natural)',
+  'hi-IN-MadhurNeural': 'Madhur (Male, Hindi, clear)',
+  // Telugu
+  'te-IN-ShrutiNeural': 'Shruti (Female, Telugu, natural)',
+  'te-IN-MohanNeural': 'Mohan (Male, Telugu, clear)',
 } as const;
 
 export type EdgeTTSVoice = keyof typeof EDGE_TTS_VOICES;
+
+// Default voice per language code
+export const LANGUAGE_DEFAULT_VOICE: Record<string, EdgeTTSVoice> = {
+  EN: 'en-US-JennyNeural',
+  HI: 'hi-IN-SwaraNeural',
+  TE: 'te-IN-ShrutiNeural',
+};
 
 export interface EdgeTTSRequest {
   text: string;
@@ -32,7 +46,6 @@ export interface EdgeTTSResult {
   characterCount: number;
 }
 
-// Path to the Python TTS script bundled with this service
 const TTS_SCRIPT = join(__dirname, '..', '..', 'scripts', 'tts.py');
 
 export async function generateNarrationWithEdgeTTS(
@@ -42,7 +55,6 @@ export async function generateNarrationWithEdgeTTS(
 
   await mkdir(dirname(outputPath), { recursive: true });
 
-  // Write text to temp file to avoid shell-escaping long strings
   const tempTextFile = `${outputPath}.tmp.txt`;
   await writeFile(tempTextFile, text, 'utf-8');
 
@@ -55,7 +67,6 @@ export async function generateNarrationWithEdgeTTS(
   try {
     await withRetry(
       async () => {
-        // Try 'python' first (Windows), fall back to 'python3' (Linux/Mac)
         const pythonCmd = process.platform === 'win32' ? 'python' : 'python3';
 
         const { stdout, stderr } = await execFileAsync(
@@ -90,7 +101,6 @@ export async function generateNarrationWithEdgeTTS(
     await unlink(tempTextFile).catch(() => {});
   }
 
-  // Verify output file exists
   let fileSize = 0;
   try {
     const fileStat = await stat(outputPath);
@@ -101,9 +111,10 @@ export async function generateNarrationWithEdgeTTS(
 
   logger.info('Narration audio generated', { outputPath, sizeBytes: fileSize, voice });
 
-  // Estimate duration (~2.3 words/second narrative pace)
+  // Estimate duration — Hindi/Telugu speech is slightly slower (~1.8 words/sec)
   const wordCount = text.trim().split(/\s+/).length;
-  const duration = Math.ceil(wordCount / 2.3);
+  const wordsPerSecond = voice.startsWith('en-') ? 2.3 : 1.8;
+  const duration = Math.ceil(wordCount / wordsPerSecond);
 
   return {
     localPath: outputPath,

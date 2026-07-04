@@ -31,6 +31,13 @@ const environmentSchema = z.object({
   OPENROUTER_API_KEY: z.string().optional(),
   OPENROUTER_STORY_MODEL: z.string().default('qwen/qwen3-8b:free'),
   OPENROUTER_SEO_MODEL: z.string().default('qwen/qwen3-8b:free'),
+  // Comma-separated fallback models tried in order if the primary model is
+  // rate-limited or unavailable. Ranked by free-tier availability.
+  OPENROUTER_FALLBACK_MODELS: z
+    .string()
+    .default(
+      'google/gemma-3-27b-it:free,deepseek/deepseek-chat-v3-0324:free,openai/gpt-oss-20b:free',
+    ),
   OPENROUTER_TIMEOUT_MS: z.coerce.number().int().positive().default(120_000),
   OPENROUTER_MAX_RETRIES: z.coerce.number().int().positive().default(3),
 
@@ -66,14 +73,16 @@ const environmentSchema = z.object({
   S3_REGION: z.string().optional(),
   S3_PUBLIC_URL: z.string().optional(),
 
+  // YouTube Data API v3 (M7 upload)
+  YOUTUBE_CLIENT_ID: z.string().optional(),
+  YOUTUBE_CLIENT_SECRET: z.string().optional(),
+  YOUTUBE_REFRESH_TOKEN: z.string().optional(),
+  YOUTUBE_CHANNEL_ID: z.string().optional(),
+
   QUEUE_CONCURRENCY: z.coerce.number().int().positive().default(2),
   QUEUE_MAX_RETRIES: z.coerce.number().int().positive().default(3),
   QUEUE_RETRY_DELAY_MS: z.coerce.number().int().positive().default(5_000),
   QUEUE_JOB_TIMEOUT_MS: z.coerce.number().int().positive().default(600_000),
-
-  SCHEDULE_INTERVAL_HOURS: z.coerce.number().int().positive().default(3),
-  SCHEDULE_ENABLED: z.coerce.boolean().default(true),
-  SCHEDULE_TIMEZONE: z.string().default('UTC'),
 
   STORY_MAX_SCENES: z.coerce.number().int().positive().default(6),
   STORY_EPISODE_DURATION_SECONDS: z.coerce.number().int().positive().default(40),

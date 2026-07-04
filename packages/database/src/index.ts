@@ -18,6 +18,12 @@ export { ImageRepository } from './repositories/image.repository.js';
 export type { CreateGeneratedImageInput } from './repositories/image.repository.js';
 export { VideoRepository } from './repositories/video.repository.js';
 export type { CreateVideoInput } from './repositories/video.repository.js';
+export { SeoRepository } from './repositories/seo.repository.js';
+export type { CreateSeoMetadataInput } from './repositories/seo.repository.js';
+export { UploadRepository } from './repositories/upload.repository.js';
+export type { CreateUploadInput } from './repositories/upload.repository.js';
+export { AnalyticsRepository } from './repositories/analytics.repository.js';
+export type { CreateAnalyticsInput } from './repositories/analytics.repository.js';
 
 // Re-export Prisma types for convenience
 export type {
@@ -44,6 +50,7 @@ export {
   UserRole,
   StoryGenre,
   ImageStyle,
+  ContentLanguage,
   EpisodeStatus,
   ImageStatus,
   AudioStatus,

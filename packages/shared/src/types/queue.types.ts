@@ -6,6 +6,7 @@ export interface EpisodePipelineJobData {
   episodeNumber: number;
   triggeredBy: 'scheduler' | 'manual' | 'api';
   timestamp: string;
+  uploadToYoutube?: boolean;
 }
 
 export interface StoryGenerationJobData {

@@ -47,17 +47,18 @@ enum UserRole {
 // =============================================================================
 
 model Story {
-  id             String     @id @default(uuid())
-  userId         String     @map("user_id")
+  id             String        @id @default(uuid())
+  userId         String        @map("user_id")
   title          String
   genre          StoryGenre
-  style          ImageStyle @default(ANIME)
-  synopsis       String     @db.Text
-  targetAudience String     @default("13-35") @map("target_audience")
-  isActive       Boolean    @default(true) @map("is_active")
-  episodeCount   Int        @default(0) @map("episode_count")
-  createdAt      DateTime   @default(now()) @map("created_at")
-  updatedAt      DateTime   @updatedAt @map("updated_at")
+  style          ImageStyle    @default(ANIME)
+  language       ContentLanguage @default(EN) @map("language")
+  synopsis       String        @db.Text
+  targetAudience String        @default("13-35") @map("target_audience")
+  isActive       Boolean       @default(true) @map("is_active")
+  episodeCount   Int           @default(0) @map("episode_count")
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
 
   user       User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   episodes   Episode[]
@@ -68,7 +69,14 @@ model Story {
   @@index([userId])
   @@index([isActive])
   @@index([genre])
+  @@index([language])
   @@map("stories")
+}
+
+enum ContentLanguage {
+  EN
+  HI
+  TE
 }
 
 enum StoryGenre {

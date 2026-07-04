@@ -10,7 +10,7 @@ export type LLMProvider = 'ollama' | 'openrouter';
 export interface LLMFactoryConfig {
   provider: LLMProvider;
   ollama: { baseUrl: string; timeoutMs: number; maxRetries: number };
-  openrouter: { apiKey: string; timeoutMs: number; maxRetries: number };
+  openrouter: { apiKey: string; timeoutMs: number; maxRetries: number; fallbackModels?: string[] };
 }
 
 export function createLLMClient(config: LLMFactoryConfig): ILLMClient {

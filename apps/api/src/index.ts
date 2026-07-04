@@ -3,6 +3,7 @@ import { createApp } from './app.js';
 import { config } from './config/index.js';
 import { connectDatabase, disconnectDatabase } from '@storyforge/database';
 import { disconnectRedis } from './infrastructure/redis.js';
+import { startPipelineWorker, stopPipelineWorker } from './workers/pipeline.worker.js';
 import { createLogger } from '@storyforge/shared';
 
 const logger = createLogger('server');
@@ -15,8 +16,21 @@ async function bootstrap(): Promise<void> {
 
   await connectDatabase();
 
+  // Start the BullMQ pipeline worker so manually triggered jobs get processed
+  startPipelineWorker();
+
   const app = createApp();
   const server = http.createServer(app);
+
+  server.on('error', (err: NodeJS.ErrnoException) => {
+    if (err.code === 'EADDRINUSE') {
+      logger.warn(`Port ${config.APP_PORT} in use — waiting 2s for old process to release...`);
+      setTimeout(() => { server.close(); server.listen(config.APP_PORT, config.APP_HOST); }, 2000);
+    } else {
+      logger.error('Server listen error', { error: err.message });
+      process.exit(1);
+    }
+  });
 
   server.listen(config.APP_PORT, config.APP_HOST, () => {
     logger.info(`API server running`, {
@@ -32,6 +46,7 @@ async function bootstrap(): Promise<void> {
 
     server.close(async () => {
       try {
+        await stopPipelineWorker();
         await disconnectDatabase();
         await disconnectRedis();
         logger.info('Graceful shutdown complete');

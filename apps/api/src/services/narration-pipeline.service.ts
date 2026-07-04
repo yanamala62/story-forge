@@ -1,10 +1,11 @@
 import { createLogger, NotFoundError } from '@storyforge/shared';
-import { EpisodeRepository, AudioRepository } from '@storyforge/database';
+import { EpisodeRepository, AudioRepository, StoryRepository } from '@storyforge/database';
 import { NarrationAgentService, type EdgeTTSVoice } from '@storyforge/narration-agent';
 
 const logger = createLogger('narration-pipeline');
 
 const episodeRepo = new EpisodeRepository();
+const storyRepo = new StoryRepository();
 const audioRepo = new AudioRepository();
 const narrationAgent = new NarrationAgentService();
 
@@ -14,6 +15,7 @@ export interface NarrationPipelineResult {
   filename: string;
   duration: number;
   voice: string;
+  language: string;
   sceneCount: number;
 }
 
@@ -28,24 +30,29 @@ export const NarrationPipelineService = {
     if (!episode) throw new NotFoundError('Episode', episodeId);
     if (!episode.scenes.length) throw new Error('Episode has no scenes — run story generation first');
 
+    // Fetch story to get language
+    const story = await storyRepo.findById(episode.storyId);
+    const language = String(story?.language ?? 'EN');
+
     await episodeRepo.updateStatus(episodeId, 'GENERATING_AUDIO');
 
     const sceneNarrations = episode.scenes.map((s) => ({
       sceneNumber: s.sceneNumber,
       narration: s.narration,
     }));
+
     let result;
     if (voice) {
       result = await narrationAgent.generateNarration({
         episodeId,
         sceneNarrations,
+        language,
         voice: voice as EdgeTTSVoice,
       });
     } else {
-      result = await narrationAgent.generateNarration({ episodeId, sceneNarrations });
+      result = await narrationAgent.generateNarration({ episodeId, sceneNarrations, language });
     }
 
-    // Save to database
     await audioRepo.upsert({
       episodeId,
       filename: result.filename,
@@ -59,6 +66,7 @@ export const NarrationPipelineService = {
       episodeId,
       duration: result.duration,
       voice: result.voice,
+      language,
     });
 
     return {
@@ -67,6 +75,7 @@ export const NarrationPipelineService = {
       filename: result.filename,
       duration: result.duration,
       voice: result.voice,
+      language,
       sceneCount: episode.scenes.length,
     };
   },

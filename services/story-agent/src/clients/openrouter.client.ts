@@ -38,55 +38,93 @@ export class OpenRouterClient implements ILLMClient {
   private readonly apiKey: string;
   private readonly timeoutMs: number;
   private readonly maxRetries: number;
+  private readonly fallbackModels: string[];
 
-  constructor(config: { apiKey: string; timeoutMs: number; maxRetries: number }) {
+  constructor(config: {
+    apiKey: string;
+    timeoutMs: number;
+    maxRetries: number;
+    fallbackModels?: string[];
+  }) {
     this.apiKey = config.apiKey;
     this.timeoutMs = config.timeoutMs;
     this.maxRetries = config.maxRetries;
+    this.fallbackModels = config.fallbackModels ?? [];
   }
 
   async chat(model: string, messages: LLMMessage[], options: LLMChatOptions = {}): Promise<string> {
-    logger.debug('Sending request to OpenRouter', {
-      model,
-      messageCount: messages.length,
-      jsonMode: options.jsonMode,
-    });
+    // Try the requested model first, then each fallback in priority order.
+    const candidates = [model, ...this.fallbackModels.filter((m) => m !== model)];
+    let lastError: unknown;
 
+    for (let i = 0; i < candidates.length; i++) {
+      const currentModel = candidates[i]!;
+      const isLastCandidate = i === candidates.length - 1;
+
+      logger.debug('Sending request to OpenRouter', {
+        model: currentModel,
+        messageCount: messages.length,
+        jsonMode: options.jsonMode,
+        fallbackAttempt: i > 0,
+      });
+
+      try {
+        const text = await this.tryModel(currentModel, messages, options, isLastCandidate);
+        if (i > 0) {
+          logger.info('Fallback model succeeded', { model: currentModel, requestedModel: model });
+        }
+        return text;
+      } catch (error) {
+        lastError = error;
+        const isRateLimit = this.isRateLimitError(error);
+        logger.warn(isRateLimit ? 'Model rate-limited' : 'Model request failed', {
+          failedModel: currentModel,
+          nextModel: isLastCandidate ? null : candidates[i + 1],
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+
+    throw lastError;
+  }
+
+  /**
+   * Rate limits don't improve by retrying the SAME model — only retry for
+   * transient/network errors. Each model gets up to 2 quick attempts before
+   * falling through to the next fallback model (or failing on the last one).
+   */
+  private async tryModel(
+    model: string,
+    messages: LLMMessage[],
+    options: LLMChatOptions,
+    isLastCandidate: boolean,
+  ): Promise<string> {
     const result = await withRetry(
       () =>
         withTimeout(
           this.sendRequest(model, messages, options),
           this.timeoutMs,
-          `OpenRouter request timed out after ${this.timeoutMs}ms`,
+          `OpenRouter request timed out after ${this.timeoutMs}ms (model: ${model})`,
         ),
       {
-        maxAttempts: this.maxRetries,
-        initialDelayMs: 5000,
-        maxDelayMs: 60000,
-        retryIf: (err) => {
-          // Don't retry on rate limits — they need a full minute to reset
-          const msg = err instanceof Error ? err.message : String(err);
-          if (msg.includes('Rate limit') || msg.includes('rate limit')) {
-            logger.warn('Rate limit hit — waiting 65 seconds before retry', { model });
-            return true; // still retry but the delay below handles the wait
-          }
-          return true;
-        },
+        maxAttempts: isLastCandidate ? this.maxRetries : 2,
+        initialDelayMs: 3000,
+        maxDelayMs: 10_000,
+        backoffMultiplier: 2,
+        // Don't waste time retrying a rate-limited model — move to the next one instead,
+        // unless this is the only/last model left, in which case retry with backoff.
+        retryIf: (err) => isLastCandidate || !this.isRateLimitError(err),
         onRetry: (err, attempt) => {
-          const msg = err instanceof Error ? err.message : String(err);
-          const isRateLimit = msg.includes('Rate limit') || msg.includes('rate limit');
-          logger.warn('Retrying OpenRouter request', {
+          logger.warn('Retrying same model', {
+            model,
             attempt,
-            isRateLimit,
-            error: msg.slice(0, 120),
+            error: err instanceof Error ? err.message : String(err),
           });
         },
       },
     );
 
-    const text = result.trim();
-    logger.debug('OpenRouter response received', { model, outputLength: text.length });
-    return text;
+    return result.trim();
   }
 
   async chatJSON<T>(
@@ -139,6 +177,17 @@ export class OpenRouterClient implements ILLMClient {
     }
   }
 
+  private isRateLimitError(err: unknown): boolean {
+    const msg = err instanceof Error ? err.message : String(err);
+    return (
+      msg.toLowerCase().includes('rate limit') ||
+      msg.includes('429') ||
+      (err instanceof ExternalServiceError &&
+        typeof (err.details as Record<string, unknown>)?.['status'] === 'number' &&
+        ((err.details as Record<string, unknown>)['status'] as number) === 429)
+    );
+  }
+
   private async sendRequest(
     model: string,
     messages: LLMMessage[],
@@ -176,12 +225,16 @@ export class OpenRouterClient implements ILLMClient {
 
     const json = (await response.json()) as OpenRouterResponse;
 
+    // Detect 429 from HTTP status OR from provider error body (OpenRouter wraps
+    // upstream 429s as HTTP 200 with error.code = 429 in some configurations).
+    const errorCode = json.error?.code ?? response.status;
+    const isRateLimit = response.status === 429 || errorCode === 429;
+
     if (!response.ok || json.error) {
-      throw new ExternalServiceError(
-        'OpenRouter',
-        json.error?.message ?? `HTTP ${response.status}`,
-        { status: response.status, model },
-      );
+      const msg = isRateLimit
+        ? `Rate limit (429): ${json.error?.message ?? 'too many requests'}`
+        : (json.error?.message ?? `HTTP ${response.status}`);
+      throw new ExternalServiceError('OpenRouter', msg, { status: errorCode, model });
     }
 
     const content = json.choices[0]?.message?.content;

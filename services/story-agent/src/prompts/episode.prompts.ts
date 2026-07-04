@@ -5,6 +5,7 @@ export interface EpisodePromptContext {
   storyTitle: string;
   genre: StoryGenre;
   style: ImageStyle;
+  language?: string;
   synopsis: string;
   episodeNumber: number;
   previousEpisodeSummary?: string;
@@ -12,6 +13,23 @@ export interface EpisodePromptContext {
   memory: StoryMemory;
   targetDurationSeconds: number;
   maxScenes: number;
+}
+
+const LANGUAGE_LABELS: Record<string, string> = {
+  EN: 'English',
+  HI: 'Hindi (हिन्दी — Devanagari script)',
+  TE: 'Telugu (తెలుగు script)',
+};
+
+function buildLanguageInstruction(language: string): string {
+  if (language === 'EN' || !language) return '';
+  const label = LANGUAGE_LABELS[language] ?? language;
+  return `
+LANGUAGE REQUIREMENT (MANDATORY):
+Generate ALL narration text, title, hook, cliffhanger, key events, character names, and location names in ${label}.
+Scene descriptions (the "description" field used for AI image generation) should remain in English for best results.
+The entire story voice-over must be in ${label} — this is for a ${label}-language audience.
+`.trim();
 }
 
 const NEGATIVE_CONTENT_RULES = `
@@ -77,8 +95,10 @@ export function buildFirstEpisodePrompt(ctx: EpisodePromptContext): string {
       ? ctx.characters.map((c) => `- ${c.name}: ${c.description}`).join('\n')
       : 'No characters defined yet — introduce the protagonist in this episode.';
 
-  return `You are a master storyteller creating the first episode of an engaging ${ctx.genre.toLowerCase()} anime/cinematic story for a young adult audience (ages 13-35).
+  const langInstruction = buildLanguageInstruction(ctx.language ?? 'EN');
 
+  return `You are a master storyteller creating the first episode of an engaging ${ctx.genre.toLowerCase()} anime/cinematic story for a young adult audience (ages 13-35).
+${langInstruction ? `\n${langInstruction}\n` : ''}
 STORY DETAILS:
 Title: "${ctx.storyTitle}"
 Genre: ${ctx.genre}
@@ -122,7 +142,10 @@ export function buildContinuationEpisodePrompt(ctx: EpisodePromptContext): strin
   const pendingCliffhangers = (ctx.memory.worldState.pendingCliffhangers ?? []).join('\n- ');
   const activeConflicts = (ctx.memory.worldState.activeConflicts ?? []).join(', ');
 
+  const langInstruction = buildLanguageInstruction(ctx.language ?? 'EN');
+
   return `You are a master storyteller writing Episode ${ctx.episodeNumber} of an ongoing ${ctx.genre.toLowerCase()} anime/cinematic story.
+${langInstruction ? `\n${langInstruction}\n` : ''}
 
 STORY DETAILS:
 Title: "${ctx.storyTitle}"
