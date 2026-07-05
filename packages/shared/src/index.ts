@@ -2,7 +2,6 @@
 export * from './types/enums.js';
 export * from './types/story.types.js';
 export * from './types/agent.types.js';
-export * from './types/queue.types.js';
 export * from './types/api.types.js';
 
 // Utils

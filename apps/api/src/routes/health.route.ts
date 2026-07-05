@@ -3,7 +3,6 @@ import { checkDatabaseHealth } from '@storyforge/database';
 import { createLogger, getEnv, checkStorageHealth } from '@storyforge/shared';
 import type { HealthCheckResponse, ServiceHealth, ApiResponse } from '@storyforge/shared';
 import { UploadAgentService } from '@storyforge/upload-agent';
-import { redisClient } from '../infrastructure/redis.js';
 
 const router = Router();
 const logger = createLogger('health');
@@ -26,9 +25,8 @@ const uploadAgent = new UploadAgentService();
 router.get('/', async (_req: Request, res: Response) => {
   const startTime = Date.now();
 
-  const [dbHealthy, redisHealthy, openrouterHealthy, storageHealthy, youtubeHealthy] = await Promise.allSettled([
+  const [dbHealthy, openrouterHealthy, storageHealthy, youtubeHealthy] = await Promise.allSettled([
     checkDatabase(),
-    checkRedis(),
     checkOpenRouter(),
     checkSupabaseStorage(),
     checkYouTube(),
@@ -36,17 +34,14 @@ router.get('/', async (_req: Request, res: Response) => {
 
   const services: Record<string, ServiceHealth> = {
     database: resolveServiceHealth(dbHealthy),
-    redis: resolveServiceHealth(redisHealthy),
     openrouter: resolveServiceHealth(openrouterHealthy),
     storage: resolveServiceHealth(storageHealthy),
     youtube: resolveServiceHealth(youtubeHealthy),
   };
 
-  // Only critical services (DB + Redis) determine overall health
-  const criticalDown =
-    services['database']?.status === 'down' || services['redis']?.status === 'down';
-  const allCriticalUp =
-    services['database']?.status === 'up' && services['redis']?.status === 'up';
+  // Only the database is critical to overall health
+  const criticalDown = services['database']?.status === 'down';
+  const allCriticalUp = services['database']?.status === 'up';
 
   const overallStatus: HealthCheckResponse['status'] = allCriticalUp ? 'healthy' : 'degraded';
 
@@ -83,12 +78,11 @@ router.get('/', async (_req: Request, res: Response) => {
  */
 router.get('/ready', async (_req: Request, res: Response) => {
   const dbOk = await checkDatabase().then(() => true).catch(() => false);
-  const redisOk = await checkRedis().then(() => true).catch(() => false);
 
-  if (dbOk && redisOk) {
+  if (dbOk) {
     res.status(200).json({ ready: true });
   } else {
-    res.status(503).json({ ready: false, database: dbOk, redis: redisOk });
+    res.status(503).json({ ready: false, database: dbOk });
   }
 });
 
@@ -112,16 +106,6 @@ async function checkDatabase(): Promise<ServiceHealth> {
     status: healthy ? 'up' : 'down',
     latencyMs: Date.now() - start,
   };
-}
-
-async function checkRedis(): Promise<ServiceHealth> {
-  const start = Date.now();
-  try {
-    const pong = await redisClient.ping();
-    return { status: pong === 'PONG' ? 'up' : 'down', latencyMs: Date.now() - start };
-  } catch (error) {
-    return { status: 'down', latencyMs: Date.now() - start, error: String(error) };
-  }
 }
 
 function serviceHealth(

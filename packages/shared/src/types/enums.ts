@@ -75,9 +75,6 @@ export enum VideoStatus {
 
 export enum Platform {
   YOUTUBE = 'YOUTUBE',
-  INSTAGRAM = 'INSTAGRAM',
-  TIKTOK = 'TIKTOK',
-  FACEBOOK = 'FACEBOOK',
 }
 
 export enum UploadStatus {
@@ -94,25 +91,3 @@ export enum PromptType {
   THUMBNAIL = 'THUMBNAIL',
 }
 
-export enum JobStatus {
-  PENDING = 'PENDING',
-  ACTIVE = 'ACTIVE',
-  COMPLETED = 'COMPLETED',
-  FAILED = 'FAILED',
-  DELAYED = 'DELAYED',
-  PAUSED = 'PAUSED',
-}
-
-export enum QueueName {
-  EPISODE_PIPELINE = 'episode-pipeline',
-  STORY_GENERATION = 'story-generation',
-  SCENE_GENERATION = 'scene-generation',
-  PROMPT_GENERATION = 'prompt-generation',
-  IMAGE_GENERATION = 'image-generation',
-  NARRATION_GENERATION = 'narration-generation',
-  SUBTITLE_GENERATION = 'subtitle-generation',
-  VIDEO_COMPOSITION = 'video-composition',
-  SEO_GENERATION = 'seo-generation',
-  UPLOAD = 'upload',
-  ANALYTICS = 'analytics',
-}

@@ -42,11 +42,9 @@ fi
 
 # Create required directories
 mkdir -p generated/{images,audio,subtitles,videos,thumbnails}
-mkdir -p models/{piper,whisper}
+mkdir -p models/whisper
 mkdir -p logs
-mkdir -p prompts/comfyui
 mkdir -p docker/postgres/data
-mkdir -p docker/redis/data
 
 # Create .gitkeep files
 touch generated/.gitkeep
@@ -59,8 +57,8 @@ npm install
 log_info "Dependencies installed ✓"
 
 # Start infrastructure
-log_info "Starting infrastructure services (postgres, redis, ollama, comfyui)..."
-docker compose -f docker-compose.dev.yml up -d postgres redis
+log_info "Starting infrastructure services (postgres)..."
+docker compose -f docker-compose.dev.yml up -d postgres
 
 # Wait for postgres
 log_info "Waiting for PostgreSQL to be ready..."
@@ -105,4 +103,3 @@ log_info "  3. Visit:"
 log_info "     API:    http://localhost:3000/health"
 log_info "     Docs:   http://localhost:3000/docs"
 log_info "     Adminer: http://localhost:8080"
-log_info "     Redis:  http://localhost:8081"

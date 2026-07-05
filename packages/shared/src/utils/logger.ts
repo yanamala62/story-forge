@@ -43,7 +43,9 @@ export function createLogger(service: string): winston.Logger {
     }),
   ];
 
-  if (!isDev) {
+  // Off by default — most PaaS deployments (Render included) only capture
+  // stdout/stderr, so rotating log files nobody reads are pure overhead.
+  if (process.env['LOG_TO_FILE'] === 'true') {
     transports.push(...createFileTransports(service));
   }
 

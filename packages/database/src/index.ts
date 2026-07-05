@@ -43,7 +43,6 @@ export type {
   Upload,
   Analytics,
   Setting,
-  QueueJob,
 } from '@prisma/client';
 
 export {
@@ -60,5 +59,4 @@ export {
   Platform,
   UploadStatus,
   PromptType,
-  JobStatus,
 } from '@prisma/client';
