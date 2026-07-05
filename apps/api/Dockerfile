@@ -131,9 +131,17 @@ COPY --from=builder --chown=storyforge:nodejs /app/apps/api/package.json ./apps/
 # malformed Supabase upload key), keep STORAGE_LOCAL_PATH/LOG_DIR at their
 # relative defaults ('./generated', 'cwd/logs') and symlink those relative
 # locations to /tmp — zero code changes, still fully stateless.
-RUN mkdir -p /tmp/storyforge/generated /tmp/storyforge/logs \
-    && chown -R storyforge:nodejs /tmp/storyforge \
-    && ln -s /tmp/storyforge/generated /app/apps/api/generated \
+#
+# The symlinks themselves are created at build time (they live under /app,
+# not /tmp, so they survive fine), but the actual target directories under
+# /tmp/storyforge are NOT created here — many hosts (Render included) mount
+# a fresh, empty tmpfs at /tmp when the container *starts*, which discards
+# anything written under /tmp during the image build. Creating them here
+# would leave a dangling symlink at runtime (confirmed locally by reproducing
+# with `docker run --tmpfs /tmp`: mkdir fails with
+# "ENOTDIR: not a directory, mkdir '/app/apps/api/generated'"). The real
+# mkdir happens in CMD below, every time the container actually starts.
+RUN ln -s /tmp/storyforge/generated /app/apps/api/generated \
     && ln -s /tmp/storyforge/logs /app/apps/api/logs
 
 # `adduser --system` gives storyforge no real home dir (HOME=/nonexistent on
@@ -158,4 +166,7 @@ EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
     CMD curl -f http://localhost:3000/health/live || exit 1
 
-CMD ["node", "dist/index.js"]
+# mkdir (not just relying on the build-time symlink target) because /tmp may
+# be a fresh empty mount at container start on the actual host — see the
+# comment above the symlink RUN step for why.
+CMD ["sh", "-c", "mkdir -p /tmp/storyforge/generated /tmp/storyforge/logs && exec node dist/index.js"]
