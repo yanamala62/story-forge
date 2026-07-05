@@ -1,0 +1,14 @@
+# Python dependencies for StoryForge AI's media-generation scripts.
+# These are invoked as child processes from Node.js — see:
+#   services/narration-agent/scripts/tts.py             (edge-tts)
+#   services/subtitle-agent/scripts/whisper_transcribe.py (faster-whisper)
+#
+# Verified as the only two third-party Python imports in the repo
+# (grepped for `import` across every *.py file); versions pinned to what
+# is already installed and working in this environment.
+
+# Microsoft Edge TTS client — used by narration-agent for text-to-speech synthesis.
+edge-tts==7.2.8
+
+# CTranslate2-based Whisper transcription — used by subtitle-agent to generate .srt subtitles.
+faster-whisper==1.2.1
