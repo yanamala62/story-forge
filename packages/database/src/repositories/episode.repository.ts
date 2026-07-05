@@ -176,4 +176,19 @@ export class EpisodeRepository extends BaseRepository {
       include: { scenes: { orderBy: { sceneNumber: 'asc' } } },
     });
   }
+
+  /**
+   * Marks any episode left in a non-terminal (GENERATING_ / COMPOSING_VIDEO / UPLOADING)
+   * status as FAILED. Meant to run once at API boot: the in-memory "running" tracking is
+   * always empty right after a fresh process start, so any such episode is provably orphaned
+   * (the previous process died mid-pipeline without a chance to mark it FAILED). Without
+   * this, an orphaned episode blocks all future triggers for its story forever.
+   */
+  async reconcileOrphanedEpisodes(): Promise<number> {
+    const result = await this.db.episode.updateMany({
+      where: { status: { notIn: ['PENDING', 'PUBLISHED', 'FAILED'] } },
+      data: { status: 'FAILED', processingError: 'Interrupted by server restart' },
+    });
+    return result.count;
+  }
 }

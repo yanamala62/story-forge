@@ -1,5 +1,6 @@
 import { createLogger, classifyPipelineError, NotFoundError } from '@storyforge/shared';
 import { pipelineFlow } from '../utils/pipeline-flow.js';
+import { PipelineLogBus } from './pipeline-log-bus.js';
 import {
   EpisodeRepository,
   StoryRepository,
@@ -36,6 +37,9 @@ const storyAgent = new StoryAgentService();
 
 // In-memory guard: prevent concurrent pipeline runs for the same episode.
 const runningEpisodes = new Set<string>();
+
+// Cooperative cancellation: checked at each step boundary (M1..M7), not mid-step.
+const cancelledEpisodes = new Set<string>();
 
 const MAX_RETRIES_PER_STEP = 3;
 
@@ -132,6 +136,18 @@ export const PipelineOrchestratorService = {
   },
 
   /**
+   * Requests cancellation of a running pipeline. Cooperative: takes effect at the
+   * next step boundary (M1..M7), not mid-step — an in-flight ffmpeg render or LLM
+   * call is not interrupted. Returns false if the episode isn't currently running.
+   */
+  cancel(episodeId: string): boolean {
+    if (!runningEpisodes.has(episodeId)) return false;
+    cancelledEpisodes.add(episodeId);
+    PipelineLogBus.emit(episodeId, 'warn', 'Cancellation requested — will stop at the next step boundary');
+    return true;
+  },
+
+  /**
    * Fire-and-forget: starts the pipeline in background and returns immediately.
    * Use GET /pipeline/status to poll progress.
    */
@@ -185,6 +201,21 @@ export const PipelineOrchestratorService = {
       pipelineFlow.start(episodeId, episode.episodeNumber, episode.status, opts.uploadToYoutube ?? false);
       logger.info('Pipeline started', { episodeId, episodeNumber: episode.episodeNumber, currentStatus: episode.status });
 
+      // ── Helper: bail out cleanly if cancel() was called since the last checkpoint ──
+      const bailIfCancelled = async (): Promise<OrchestratorResult | null> => {
+        if (!cancelledEpisodes.has(episodeId)) return null;
+        cancelledEpisodes.delete(episodeId);
+        const message = 'Cancelled by user';
+        await episodeRepo.updateStatus(episodeId, 'FAILED', message);
+        pipelineFlow.end(
+          episodeId, false, 'FAILED', Date.now() - pipelineStart,
+          steps.filter((s) => s.status === 'completed').length,
+          steps.filter((s) => s.status === 'skipped').length,
+        );
+        logger.info('Pipeline cancelled by user', { episodeId });
+        return { episodeId, steps, finalStatus: 'FAILED', success: false };
+      };
+
       // ── Helper: run a single step with skip-if-done + visual flow row ──────
       const runStep = async (
         name: string,
@@ -219,6 +250,8 @@ export const PipelineOrchestratorService = {
       // M1: Story + Scenes
       // Done when: episode has at least one scene persisted in DB.
       // ──────────────────────────────────────────────────────────────────────
+      const cancelled1 = await bailIfCancelled();
+      if (cancelled1) return cancelled1;
       const ok1 = await runStep(
         'M1: Story + Scenes',
         'OpenRouter LLM',
@@ -280,6 +313,8 @@ export const PipelineOrchestratorService = {
       // M2: Image Generation (prompts + images)
       // Done when: every scene has a GeneratedImage record.
       // ──────────────────────────────────────────────────────────────────────
+      const cancelled2 = await bailIfCancelled();
+      if (cancelled2) return cancelled2;
       const sceneCount = (await episodeRepo.findById(episodeId))?.scenes.length ?? 0;
       const ok2 = await runStep(
         'M2: Image Generation',
@@ -298,6 +333,8 @@ export const PipelineOrchestratorService = {
       if (!ok2) { pipelineFlow.end(episodeId, false, 'FAILED', Date.now() - pipelineStart, 0, steps.filter((s) => s.status === 'skipped').length); return { episodeId, steps, finalStatus: 'FAILED', success: false }; }
 
       // M3 ───────────────────────────────────────────────────────────────────
+      const cancelled3 = await bailIfCancelled();
+      if (cancelled3) return cancelled3;
       const ok3 = await runStep(
         'M3: Narration (TTS)',
         'edge-tts subprocess',
@@ -307,6 +344,8 @@ export const PipelineOrchestratorService = {
       if (!ok3) { pipelineFlow.end(episodeId, false, 'FAILED', Date.now() - pipelineStart, 0, steps.filter((s) => s.status === 'skipped').length); return { episodeId, steps, finalStatus: 'FAILED', success: false }; }
 
       // M4 ───────────────────────────────────────────────────────────────────
+      const cancelled4 = await bailIfCancelled();
+      if (cancelled4) return cancelled4;
       const ok4 = await runStep(
         'M4: Subtitles (Whisper)',
         'faster-whisper subprocess',
@@ -316,6 +355,8 @@ export const PipelineOrchestratorService = {
       if (!ok4) { pipelineFlow.end(episodeId, false, 'FAILED', Date.now() - pipelineStart, 0, steps.filter((s) => s.status === 'skipped').length); return { episodeId, steps, finalStatus: 'FAILED', success: false }; }
 
       // M5 ───────────────────────────────────────────────────────────────────
+      const cancelled5 = await bailIfCancelled();
+      if (cancelled5) return cancelled5;
       const ok5 = await runStep(
         'M5: Video Composition',
         'FFmpeg two-pass',
@@ -325,6 +366,8 @@ export const PipelineOrchestratorService = {
       if (!ok5) { pipelineFlow.end(episodeId, false, 'FAILED', Date.now() - pipelineStart, 0, steps.filter((s) => s.status === 'skipped').length); return { episodeId, steps, finalStatus: 'FAILED', success: false }; }
 
       // M6 ───────────────────────────────────────────────────────────────────
+      const cancelled6 = await bailIfCancelled();
+      if (cancelled6) return cancelled6;
       const ok6 = await runStep(
         'M6: SEO Generation',
         'OpenRouter LLM',
@@ -339,6 +382,8 @@ export const PipelineOrchestratorService = {
 
       // M7 (optional) ────────────────────────────────────────────────────────
       if (opts.uploadToYoutube) {
+        const cancelled7 = await bailIfCancelled();
+        if (cancelled7) return cancelled7;
         const ok7 = await runStep(
           'M7: YouTube Upload',
           'YouTube Data API v3',
@@ -370,6 +415,7 @@ export const PipelineOrchestratorService = {
       return { episodeId, steps, finalStatus, success: true };
     } finally {
       runningEpisodes.delete(episodeId);
+      cancelledEpisodes.delete(episodeId);
     }
   },
 

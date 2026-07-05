@@ -1,4 +1,4 @@
-import { createLogger, NotFoundError } from '@storyforge/shared';
+import { createLogger, NotFoundError, ensureLocalFile, releaseLocalFile } from '@storyforge/shared';
 import {
   EpisodeRepository,
   AudioRepository,
@@ -63,24 +63,45 @@ export const VideoPipelineService = {
 
     await episodeRepo.updateStatus(episodeId, 'COMPOSING_VIDEO');
 
-    const result = await videoAgent.composeVideo({
-      episodeId,
-      imagePaths: images.map((img) => img.localPath),
-      audioPath: audioFile.localPath,
-      subtitlePath: subtitleFile.localPath,
-      language,
-    });
+    // Re-download any inputs that were already uploaded to remote storage and
+    // cleaned up locally after M2/M3/M4 — ffmpeg needs real local files.
+    const imageDownloaded = await Promise.all(
+      images.map((img) => ensureLocalFile(img.localPath, img.s3Key)),
+    );
+    const audioDownloaded = await ensureLocalFile(audioFile.localPath, audioFile.s3Key);
+    const subtitleDownloaded = await ensureLocalFile(subtitleFile.localPath, subtitleFile.s3Key);
+
+    let result;
+    try {
+      result = await videoAgent.composeVideo({
+        episodeId,
+        imagePaths: images.map((img) => img.localPath),
+        audioPath: audioFile.localPath,
+        subtitlePath: subtitleFile.localPath,
+        language,
+      });
+    } finally {
+      await Promise.all([
+        ...images.map((img, i) => releaseLocalFile(img.localPath, imageDownloaded[i]!)),
+        releaseLocalFile(audioFile.localPath, audioDownloaded),
+        releaseLocalFile(subtitleFile.localPath, subtitleDownloaded),
+      ]);
+    }
 
     await videoRepo.upsert({
       episodeId,
       filename: result.filename,
       localPath: result.localPath,
+      s3Key: result.s3Key,
+      s3Url: result.s3Url,
       duration: result.duration,
       fileSize: result.fileSize,
       width: result.width,
       height: result.height,
       fps: result.fps,
       thumbnailPath: result.thumbnailPath,
+      thumbnailS3Key: result.thumbnailS3Key,
+      thumbnailS3Url: result.thumbnailS3Url,
     });
 
     await episodeRepo.updateStatus(episodeId, 'GENERATING_SEO');

@@ -79,4 +79,17 @@ export class UploadAgentService {
   isYouTubeConfigured(): boolean {
     return this.youtube !== null;
   }
+
+  /** Confirms the configured refresh token is still valid — used by the health check. */
+  async checkYouTubeHealth(): Promise<{ configured: boolean; ok: boolean; message?: string }> {
+    if (!this.youtube) {
+      return { configured: false, ok: false, message: 'YouTube credentials not configured' };
+    }
+    try {
+      await this.youtube.checkHealth();
+      return { configured: true, ok: true };
+    } catch (err) {
+      return { configured: true, ok: false, message: err instanceof Error ? err.message : String(err) };
+    }
+  }
 }

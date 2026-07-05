@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useQuery, useMutation } from '@tanstack/react-query';
-import { Zap, Loader2 } from 'lucide-react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Zap, Loader2, RotateCcw, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -36,6 +36,8 @@ function levelColor(level: PipelineLogEntry['level']): string {
 }
 
 export function SchedulerPage() {
+  const qc = useQueryClient();
+
   const { data: storiesData, isLoading: storiesLoading } = useQuery({
     queryKey: ['stories-for-trigger'],
     queryFn: () => storiesApi.list(1, 100),
@@ -46,7 +48,12 @@ export function SchedulerPage() {
   const [selectedStoryId, setSelectedStoryId] = useState<string | undefined>(undefined);
   const [episodeId, setEpisodeId] = useState<string | null>(null);
   const [logs, setLogs] = useState<PipelineLogEntry[]>([]);
+  const [cancelRequested, setCancelRequested] = useState(false);
   const logEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setCancelRequested(false);
+  }, [episodeId]);
 
   // Default to the most-recently-updated active story once the list loads
   useEffect(() => {
@@ -55,11 +62,51 @@ export function SchedulerPage() {
     }
   }, [stories, selectedStoryId]);
 
+  // Resume tracking a pipeline that's already running for the selected story —
+  // covers navigating away and back, or clicking Trigger while one is in-flight.
+  const { data: inFlightEpisode } = useQuery({
+    queryKey: ['in-flight-episode', selectedStoryId],
+    queryFn: () => storiesApi.getInFlightEpisode(selectedStoryId!),
+    enabled: !!selectedStoryId,
+  });
+
+  useEffect(() => {
+    if (inFlightEpisode?.id && !episodeId) {
+      setEpisodeId(inFlightEpisode.id);
+    }
+  }, [inFlightEpisode, episodeId]);
+
   const triggerMutation = useMutation({
     mutationFn: (storyId: string) => schedulerApi.triggerNext(storyId),
     onSuccess: (result) => {
       setLogs([]);
       setEpisodeId(result.episodeId);
+      // Retrying/resuming reuses the SAME episode id, so neither of these reset via the
+      // episodeId-change effect below — clear them explicitly on every successful (re)start.
+      setCancelRequested(false);
+      // setEpisodeId is a no-op re-render when resuming the SAME episode (e.g. after a
+      // retry), so the status query's refetchInterval — which stopped polling once the
+      // prior FAILED snapshot set isRunning=false — never restarts on its own. Force it.
+      void qc.invalidateQueries({ queryKey: ['pipeline-status', result.episodeId] });
+    },
+    onError: (error: Error) => {
+      // If it's already running, just resume tracking it instead of dead-ending on an error.
+      const match = error.message.match(/Episode ([0-9a-f-]{36}) is already in-flight/i);
+      if (match) {
+        setEpisodeId(match[1]!);
+        setCancelRequested(false);
+        void qc.invalidateQueries({ queryKey: ['pipeline-status', match[1]] });
+      }
+    },
+  });
+
+  const conflictRecovered =
+    !!triggerMutation.error && /already in-flight/i.test((triggerMutation.error as Error).message);
+
+  const cancelMutation = useMutation({
+    mutationFn: () => pipelineApi.cancel(episodeId!),
+    onSuccess: (result) => {
+      if (result.cancelled) setCancelRequested(true);
     },
   });
 
@@ -70,7 +117,9 @@ export function SchedulerPage() {
     refetchInterval: (query) => {
       const data = query.state.data as PipelineStatus | undefined;
       if (!data) return 2_000;
-      return data.isRunning ? 2_000 : false;
+      // Never fully stop — just slow down when idle, so a resumed run is picked up
+      // within a bounded time even if something else fails to force an immediate refetch.
+      return data.isRunning ? 2_000 : 10_000;
     },
   });
 
@@ -88,11 +137,15 @@ export function SchedulerPage() {
 
   const isRunning =
     triggerMutation.isPending || (!!episodeId && (pipelineStatus?.isRunning ?? true));
+  const hasFailed = pipelineStatus?.status === 'FAILED';
+  const wasCancelled = !!pipelineStatus?.processingError?.toLowerCase().includes('cancelled');
 
   const steps: PipelineStep[] = [
     { id: 'M0', name: 'M0: Episode Created', status: episodeId ? 'completed' : 'pending' },
     ...(pipelineStatus?.steps ?? PENDING_STEPS),
   ];
+
+  const retry = () => selectedStoryId && triggerMutation.mutate(selectedStoryId);
 
   return (
     <div className="space-y-6">
@@ -130,15 +183,33 @@ export function SchedulerPage() {
                 </Select>
               )}
 
-              <Button
-                onClick={() => selectedStoryId && triggerMutation.mutate(selectedStoryId)}
-                disabled={!selectedStoryId || isRunning}
-              >
-                {isRunning ? <Loader2 className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" />}
-                {isRunning ? 'Running…' : 'Trigger Pipeline'}
+              <Button onClick={retry} disabled={!selectedStoryId || isRunning}>
+                {isRunning ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : hasFailed ? (
+                  <RotateCcw className="h-4 w-4" />
+                ) : (
+                  <Zap className="h-4 w-4" />
+                )}
+                {isRunning
+                  ? cancelRequested ? 'Cancelling…' : 'Running…'
+                  : wasCancelled ? 'Resume Pipeline'
+                  : hasFailed ? 'Retry Pipeline'
+                  : 'Trigger Pipeline'}
               </Button>
 
-              {triggerMutation.isError && (
+              {isRunning && episodeId && !cancelRequested && (
+                <Button
+                  variant="outline"
+                  onClick={() => cancelMutation.mutate()}
+                  disabled={cancelMutation.isPending}
+                >
+                  <XCircle className="h-4 w-4" />
+                  Cancel
+                </Button>
+              )}
+
+              {triggerMutation.isError && !conflictRecovered && (
                 <span className="text-sm text-red-400">{(triggerMutation.error as Error).message}</span>
               )}
             </div>
@@ -153,7 +224,12 @@ export function SchedulerPage() {
               <CardTitle className="text-base">Pipeline Progress</CardTitle>
             </CardHeader>
             <CardContent className="pt-2 pb-5 px-5">
-              <PipelineWorkflowDots steps={steps} />
+              <PipelineWorkflowDots
+                steps={steps}
+                showLabels
+                onRetryStep={retry}
+                retryDisabled={isRunning}
+              />
             </CardContent>
           </Card>
 

@@ -6,6 +6,8 @@ export interface CreateGeneratedImageInput {
   sceneId: string;
   filename: string;
   localPath: string;
+  s3Key?: string | null;
+  s3Url?: string | null;
   width: number;
   height: number;
   seed: number;
@@ -23,6 +25,8 @@ export class ImageRepository extends BaseRepository {
       update: {
         filename: input.filename,
         localPath: input.localPath,
+        s3Key: input.s3Key ?? null,
+        s3Url: input.s3Url ?? null,
         seed: input.seed,
         status: 'COMPLETED',
       },
@@ -31,6 +35,8 @@ export class ImageRepository extends BaseRepository {
         sceneId: input.sceneId,
         filename: input.filename,
         localPath: input.localPath,
+        s3Key: input.s3Key ?? null,
+        s3Url: input.s3Url ?? null,
         width: input.width,
         height: input.height,
         seed: input.seed,

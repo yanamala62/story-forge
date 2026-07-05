@@ -373,6 +373,8 @@ model Video {
   codec         String      @default("h264")
   fileSize      BigInt      @map("file_size")
   thumbnailPath String?     @map("thumbnail_path")
+  thumbnailS3Key String?    @map("thumbnail_s3_key")
+  thumbnailS3Url String?    @map("thumbnail_s3_url")
   status        VideoStatus @default(PENDING)
   createdAt     DateTime    @default(now()) @map("created_at")
   updatedAt     DateTime    @updatedAt @map("updated_at")

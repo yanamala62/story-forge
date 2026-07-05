@@ -6,7 +6,11 @@
       "Bash(sleep 8 && curl -s http://localhost:3000/health 2>&1; echo \"---log---\"; tail -40 /tmp/api-dev.log 2>&1)",
       "Read(//tmp/**)",
       "Bash(sleep 10 && curl -s http://localhost:3000/health 2>&1; echo; echo \"---log---\"; cat /tmp/api-dev.log 2>&1)",
-      "Bash(node -e ' *)"
+      "Bash(node -e ' *)",
+      "Bash(curl -s \"http://localhost:3000/api/stories?limit=5\")",
+      "Bash(npm uninstall *)",
+      "Bash(npm install *)",
+      "Bash(taskkill //PID 5204 //F)"
     ]
   }
 }

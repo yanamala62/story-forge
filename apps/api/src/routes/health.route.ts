@@ -1,11 +1,13 @@
 import { Router, type Request, type Response } from 'express';
 import { checkDatabaseHealth } from '@storyforge/database';
-import { createLogger } from '@storyforge/shared';
+import { createLogger, getEnv, checkStorageHealth } from '@storyforge/shared';
 import type { HealthCheckResponse, ServiceHealth, ApiResponse } from '@storyforge/shared';
+import { UploadAgentService } from '@storyforge/upload-agent';
 import { redisClient } from '../infrastructure/redis.js';
 
 const router = Router();
 const logger = createLogger('health');
+const uploadAgent = new UploadAgentService();
 
 /**
  * @swagger
@@ -24,19 +26,20 @@ const logger = createLogger('health');
 router.get('/', async (_req: Request, res: Response) => {
   const startTime = Date.now();
 
-  const [dbHealthy, redisHealthy, ollamaHealthy, comfyuiHealthy] = await Promise.allSettled([
+  const [dbHealthy, redisHealthy, openrouterHealthy, storageHealthy, youtubeHealthy] = await Promise.allSettled([
     checkDatabase(),
     checkRedis(),
-    checkOllama(),
-    checkComfyUI(),
+    checkOpenRouter(),
+    checkSupabaseStorage(),
+    checkYouTube(),
   ]);
 
   const services: Record<string, ServiceHealth> = {
     database: resolveServiceHealth(dbHealthy),
     redis: resolveServiceHealth(redisHealthy),
-    // Ollama and ComfyUI are optional — not used in current config (OpenRouter + Pollinations)
-    ollama: resolveServiceHealth(ollamaHealthy),
-    comfyui: resolveServiceHealth(comfyuiHealthy),
+    openrouter: resolveServiceHealth(openrouterHealthy),
+    storage: resolveServiceHealth(storageHealthy),
+    youtube: resolveServiceHealth(youtubeHealthy),
   };
 
   // Only critical services (DB + Redis) determine overall health
@@ -121,26 +124,64 @@ async function checkRedis(): Promise<ServiceHealth> {
   }
 }
 
-async function checkOllama(): Promise<ServiceHealth> {
+function serviceHealth(
+  status: ServiceHealth['status'],
+  opts: { latencyMs?: number; error?: string } = {},
+): ServiceHealth {
+  const result: ServiceHealth = { status };
+  if (opts.latencyMs !== undefined) result.latencyMs = opts.latencyMs;
+  if (opts.error !== undefined) result.error = opts.error;
+  return result;
+}
+
+async function checkOpenRouter(): Promise<ServiceHealth> {
   const start = Date.now();
+  const env = getEnv();
+
+  if (env.LLM_PROVIDER !== 'openrouter' || !env.OPENROUTER_API_KEY) {
+    return serviceHealth('unknown', { error: 'Not configured (LLM_PROVIDER != openrouter or no API key)' });
+  }
+
   try {
-    const baseUrl = process.env['OLLAMA_BASE_URL'] ?? 'http://localhost:11434';
-    const response = await fetch(`${baseUrl}/api/tags`, { signal: AbortSignal.timeout(5000) });
-    return { status: response.ok ? 'up' : 'down', latencyMs: Date.now() - start };
+    const response = await fetch('https://openrouter.ai/api/v1/key', {
+      headers: { Authorization: `Bearer ${env.OPENROUTER_API_KEY}` },
+      signal: AbortSignal.timeout(5000),
+    });
+    const latencyMs = Date.now() - start;
+    return response.ok
+      ? serviceHealth('up', { latencyMs })
+      : serviceHealth('down', { latencyMs, error: `HTTP ${response.status}` });
   } catch (error) {
-    return { status: 'down', latencyMs: Date.now() - start, error: String(error) };
+    return serviceHealth('down', { latencyMs: Date.now() - start, error: String(error) });
   }
 }
 
-async function checkComfyUI(): Promise<ServiceHealth> {
+async function checkSupabaseStorage(): Promise<ServiceHealth> {
   const start = Date.now();
-  try {
-    const baseUrl = process.env['COMFYUI_BASE_URL'] ?? 'http://localhost:8188';
-    const response = await fetch(`${baseUrl}/system_stats`, { signal: AbortSignal.timeout(5000) });
-    return { status: response.ok ? 'up' : 'down', latencyMs: Date.now() - start };
-  } catch (error) {
-    return { status: 'down', latencyMs: Date.now() - start, error: String(error) };
+  const result = await checkStorageHealth();
+
+  if (!result.ok && result.message?.startsWith('Supabase Storage not configured')) {
+    return serviceHealth('unknown', { error: result.message });
   }
+
+  const latencyMs = Date.now() - start;
+  return result.ok
+    ? serviceHealth('up', { latencyMs })
+    : serviceHealth('down', { latencyMs, ...(result.message ? { error: result.message } : {}) });
+}
+
+async function checkYouTube(): Promise<ServiceHealth> {
+  const start = Date.now();
+  const result = await uploadAgent.checkYouTubeHealth();
+
+  if (!result.configured) {
+    return serviceHealth('unknown', result.message ? { error: result.message } : {});
+  }
+
+  const latencyMs = Date.now() - start;
+  return result.ok
+    ? serviceHealth('up', { latencyMs })
+    : serviceHealth('down', { latencyMs, ...(result.message ? { error: result.message } : {}) });
 }
 
 function resolveServiceHealth(result: PromiseSettledResult<ServiceHealth>): ServiceHealth {

@@ -129,7 +129,11 @@ export function DashboardPage() {
                       {svc.latencyMs !== undefined && (
                         <span className="text-xs text-muted-foreground">{svc.latencyMs}ms</span>
                       )}
-                      <Badge variant={svc.status === 'up' ? 'success' : 'destructive'}>
+                      <Badge
+                        variant={
+                          svc.status === 'up' ? 'success' : svc.status === 'unknown' ? 'secondary' : 'destructive'
+                        }
+                      >
                         {svc.status}
                       </Badge>
                     </div>

@@ -1,4 +1,4 @@
-import { createLogger, getEnv, AgentError } from '@storyforge/shared';
+import { createLogger, getEnv, AgentError, persistFile } from '@storyforge/shared';
 import { join } from 'path';
 import { transcribeWithWhisper } from './providers/whisper.provider.js';
 
@@ -23,6 +23,8 @@ export interface GenerateSubtitlesResult {
   filename: string;
   entryCount: number;
   language: string;
+  s3Key: string | null;
+  s3Url: string | null;
 }
 
 export class SubtitleAgentService {
@@ -75,11 +77,15 @@ export class SubtitleAgentService {
         sizeBytes: result.sizeBytes,
       });
 
+      const { s3Key, s3Url } = await persistFile(result.srtPath, 'application/x-subrip');
+
       return {
         localPath: result.srtPath,
         filename,
         entryCount: result.entryCount,
         language: whisperLang,
+        s3Key,
+        s3Url,
       };
     } catch (error) {
       throw new AgentError(

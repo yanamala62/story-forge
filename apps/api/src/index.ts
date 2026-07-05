@@ -1,7 +1,7 @@
 import http from 'http';
 import { createApp } from './app.js';
 import { config } from './config/index.js';
-import { connectDatabase, disconnectDatabase } from '@storyforge/database';
+import { connectDatabase, disconnectDatabase, EpisodeRepository } from '@storyforge/database';
 import { disconnectRedis } from './infrastructure/redis.js';
 import { startPipelineWorker, stopPipelineWorker } from './workers/pipeline.worker.js';
 import { createLogger } from '@storyforge/shared';
@@ -15,6 +15,14 @@ async function bootstrap(): Promise<void> {
   });
 
   await connectDatabase();
+
+  // Any episode still in a non-terminal status at boot was orphaned by the previous
+  // process dying mid-pipeline (crash, restart, deploy) — mark it FAILED so it's
+  // resumable instead of silently blocking that story's future triggers forever.
+  const orphanedCount = await new EpisodeRepository().reconcileOrphanedEpisodes();
+  if (orphanedCount > 0) {
+    logger.warn(`Reconciled ${orphanedCount} orphaned episode(s) from a previous run`);
+  }
 
   // Start the BullMQ pipeline worker so manually triggered jobs get processed
   startPipelineWorker();

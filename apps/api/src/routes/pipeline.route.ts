@@ -138,6 +138,38 @@ router.post('/episodes/:id/pipeline/run/sync', async (req: Request, res: Respons
 
 /**
  * @swagger
+ * /api/episodes/{id}/pipeline/cancel:
+ *   post:
+ *     summary: Cancel a running pipeline
+ *     description: |
+ *       Cooperative cancellation — takes effect at the next step boundary (M1..M7),
+ *       not mid-step, so an in-flight ffmpeg render or LLM call is not interrupted.
+ *       The episode is marked FAILED with "Cancelled by user"; POST /pipeline/run
+ *       resumes it from the last completed checkpoint, same as retrying a failure.
+ *     tags: [Pipeline]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string }
+ *     responses:
+ *       200:
+ *         description: Whether cancellation was requested (false if nothing was running)
+ */
+router.post('/episodes/:id/pipeline/cancel', async (req: Request, res: Response) => {
+  const episodeId = req.params['id'] as string;
+  const cancelled = PipelineOrchestratorService.cancel(episodeId);
+
+  res.json({
+    success: true,
+    data: { episodeId, cancelled },
+    timestamp: new Date().toISOString(),
+    requestId: req.requestId,
+  } satisfies ApiResponse);
+});
+
+/**
+ * @swagger
  * /api/episodes/{id}/pipeline/status:
  *   get:
  *     summary: Get the pipeline status for an episode

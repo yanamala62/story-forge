@@ -57,6 +57,8 @@ export const NarrationPipelineService = {
       episodeId,
       filename: result.filename,
       localPath: result.localPath,
+      s3Key: result.s3Key,
+      s3Url: result.s3Url,
       duration: result.duration,
       voice: result.voice,
       sampleRate: 24000,

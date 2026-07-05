@@ -39,6 +39,11 @@ export class YouTubeProvider {
     return auth;
   }
 
+  /** Confirms the refresh token can still mint an access token — no quota-heavy call. */
+  async checkHealth(): Promise<void> {
+    await this.getOAuth2Client().getAccessToken();
+  }
+
   async upload(input: YouTubeUploadInput): Promise<YouTubeUploadResult> {
     const {
       videoPath,

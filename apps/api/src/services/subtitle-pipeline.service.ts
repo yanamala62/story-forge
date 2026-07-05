@@ -1,4 +1,4 @@
-import { createLogger, NotFoundError } from '@storyforge/shared';
+import { createLogger, NotFoundError, ensureLocalFile, releaseLocalFile } from '@storyforge/shared';
 import { EpisodeRepository, AudioRepository, SubtitleRepository, StoryRepository } from '@storyforge/database';
 import { SubtitleAgentService } from '@storyforge/subtitle-agent';
 
@@ -35,16 +35,24 @@ export const SubtitlePipelineService = {
 
     await episodeRepo.updateStatus(episodeId, 'GENERATING_SUBTITLES');
 
-    const result = await subtitleAgent.generateSubtitles({
-      episodeId,
-      audioPath: audioFile.localPath,
-      language,
-    });
+    const audioDownloaded = await ensureLocalFile(audioFile.localPath, audioFile.s3Key);
+    let result;
+    try {
+      result = await subtitleAgent.generateSubtitles({
+        episodeId,
+        audioPath: audioFile.localPath,
+        language,
+      });
+    } finally {
+      await releaseLocalFile(audioFile.localPath, audioDownloaded);
+    }
 
     await subtitleRepo.upsert({
       episodeId,
       filename: result.filename,
       localPath: result.localPath,
+      s3Key: result.s3Key,
+      s3Url: result.s3Url,
       language: result.language,
     });
 

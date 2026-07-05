@@ -1,4 +1,4 @@
-import { createLogger, getEnv, AgentError } from '@storyforge/shared';
+import { createLogger, getEnv, AgentError, persistFile } from '@storyforge/shared';
 import { join } from 'path';
 import { generateImageWithPollinations } from './providers/pollinations.provider.js';
 
@@ -19,6 +19,8 @@ export interface GenerateImageResult {
   width: number;
   height: number;
   seed: number;
+  s3Key: string | null;
+  s3Url: string | null;
 }
 
 export class ImageAgentService {
@@ -68,12 +70,16 @@ export class ImageAgentService {
         localPath: result.localPath,
       });
 
+      const { s3Key, s3Url } = await persistFile(result.localPath, 'image/png');
+
       return {
         localPath: result.localPath,
         filename,
         width: result.width,
         height: result.height,
         seed: result.seed,
+        s3Key,
+        s3Url,
       };
     } catch (error) {
       throw new AgentError(

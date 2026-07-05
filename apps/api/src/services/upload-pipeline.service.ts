@@ -1,4 +1,4 @@
-import { createLogger, NotFoundError } from '@storyforge/shared';
+import { createLogger, NotFoundError, ensureLocalFile, releaseLocalFile } from '@storyforge/shared';
 import {
   EpisodeRepository,
   VideoRepository,
@@ -73,6 +73,8 @@ export const UploadPipelineService = {
       status: 'UPLOADING',
     });
 
+    const videoDownloaded = await ensureLocalFile(video.localPath, video.s3Key);
+
     try {
       const result = await uploadAgent.uploadToYouTube({
         videoPath: video.localPath,
@@ -114,6 +116,8 @@ export const UploadPipelineService = {
         error instanceof Error ? error.message : String(error),
       );
       throw error;
+    } finally {
+      await releaseLocalFile(video.localPath, videoDownloaded);
     }
   },
 

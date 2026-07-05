@@ -183,4 +183,26 @@ router.get('/:id/episodes', async (req: Request, res: Response) => {
   } satisfies ApiResponse);
 });
 
+/**
+ * @swagger
+ * /api/stories/{id}/episodes/in-flight:
+ *   get:
+ *     summary: Get the episode currently mid-pipeline for a story, if any
+ *     description: Used by the frontend to resume tracking a running pipeline after navigating away and back.
+ *     tags: [Stories, Episodes]
+ *     responses:
+ *       200:
+ *         description: The in-flight episode, or null if nothing is running
+ */
+router.get('/:id/episodes/in-flight', async (req: Request, res: Response) => {
+  const episode = await StoryService.getInFlightEpisode(req.params['id'] as string);
+
+  res.json({
+    success: true,
+    data: episode,
+    timestamp: new Date().toISOString(),
+    requestId: req.requestId,
+  } satisfies ApiResponse);
+});
+
 export { router as storiesRouter };

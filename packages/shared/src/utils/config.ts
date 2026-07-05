@@ -64,14 +64,11 @@ const environmentSchema = z.object({
   AUDIO_CODEC: z.string().default('aac'),
   AUDIO_BITRATE: z.string().default('128k'),
 
-  STORAGE_TYPE: z.enum(['local', 's3']).default('local'),
+  STORAGE_TYPE: z.enum(['local', 'supabase']).default('local'),
   STORAGE_LOCAL_PATH: z.string().default('./generated'),
-  S3_ENDPOINT: z.string().optional(),
-  S3_ACCESS_KEY_ID: z.string().optional(),
-  S3_SECRET_ACCESS_KEY: z.string().optional(),
-  S3_BUCKET: z.string().optional(),
-  S3_REGION: z.string().optional(),
-  S3_PUBLIC_URL: z.string().optional(),
+  SUPABASE_URL: z.string().optional(),
+  SUPABASE_SECRET_KEY: z.string().optional(),
+  SUPABASE_BUCKET: z.string().optional(),
 
   // YouTube Data API v3 (M7 upload)
   YOUTUBE_CLIENT_ID: z.string().optional(),

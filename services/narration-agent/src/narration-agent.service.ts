@@ -1,4 +1,4 @@
-import { createLogger, getEnv, AgentError } from '@storyforge/shared';
+import { createLogger, getEnv, AgentError, persistFile } from '@storyforge/shared';
 import { join } from 'path';
 import {
   generateNarrationWithEdgeTTS,
@@ -24,6 +24,8 @@ export interface GenerateNarrationResult {
   characterCount: number;
   fullText: string;
   language: string;
+  s3Key: string | null;
+  s3Url: string | null;
 }
 
 export class NarrationAgentService {
@@ -77,6 +79,8 @@ export class NarrationAgentService {
         language,
       });
 
+      const { s3Key, s3Url } = await persistFile(result.localPath, 'audio/mpeg');
+
       return {
         localPath: result.localPath,
         filename,
@@ -85,6 +89,8 @@ export class NarrationAgentService {
         characterCount: result.characterCount,
         fullText,
         language,
+        s3Key,
+        s3Url,
       };
     } catch (error) {
       throw new AgentError(

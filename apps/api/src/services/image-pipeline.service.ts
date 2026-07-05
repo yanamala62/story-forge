@@ -125,6 +125,8 @@ export const ImagePipelineService = {
         sceneId: scene.id,
         filename: imgResult.filename,
         localPath: imgResult.localPath,
+        s3Key: imgResult.s3Key,
+        s3Url: imgResult.s3Url,
         width: imgResult.width,
         height: imgResult.height,
         seed: imgResult.seed,

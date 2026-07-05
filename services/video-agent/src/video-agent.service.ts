@@ -1,4 +1,4 @@
-import { createLogger, getEnv, AgentError } from '@storyforge/shared';
+import { createLogger, getEnv, AgentError, persistFile } from '@storyforge/shared';
 import { join } from 'path';
 import ffmpegStatic from 'ffmpeg-static';
 import ffprobeStatic from 'ffprobe-static';
@@ -23,6 +23,10 @@ export interface ComposeEpisodeVideoResult {
   width: number;
   height: number;
   fps: number;
+  s3Key: string | null;
+  s3Url: string | null;
+  thumbnailS3Key: string | null;
+  thumbnailS3Url: string | null;
 }
 
 export class VideoAgentService {
@@ -96,6 +100,11 @@ export class VideoAgentService {
         thumbnailPath,
       });
 
+      const [video, thumbnail] = await Promise.all([
+        persistFile(result.outputPath, 'video/mp4'),
+        persistFile(thumbnailPath, 'image/jpeg'),
+      ]);
+
       return {
         localPath: result.outputPath,
         thumbnailPath,
@@ -105,6 +114,10 @@ export class VideoAgentService {
         width: this.width,
         height: this.height,
         fps: this.fps,
+        s3Key: video.s3Key,
+        s3Url: video.s3Url,
+        thumbnailS3Key: thumbnail.s3Key,
+        thumbnailS3Url: thumbnail.s3Url,
       };
     } catch (error) {
       throw new AgentError(

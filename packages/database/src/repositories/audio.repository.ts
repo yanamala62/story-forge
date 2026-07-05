@@ -5,6 +5,8 @@ export interface CreateAudioFileInput {
   episodeId: string;
   filename: string;
   localPath: string;
+  s3Key?: string | null;
+  s3Url?: string | null;
   duration: number;
   voice: string;
   sampleRate?: number;
@@ -21,6 +23,8 @@ export class AudioRepository extends BaseRepository {
       update: {
         filename: input.filename,
         localPath: input.localPath,
+        s3Key: input.s3Key ?? null,
+        s3Url: input.s3Url ?? null,
         duration: input.duration,
         voice: input.voice,
         status: 'COMPLETED',
@@ -29,6 +33,8 @@ export class AudioRepository extends BaseRepository {
         episodeId: input.episodeId,
         filename: input.filename,
         localPath: input.localPath,
+        s3Key: input.s3Key ?? null,
+        s3Url: input.s3Url ?? null,
         duration: input.duration,
         voice: input.voice,
         sampleRate: input.sampleRate ?? 24000,

@@ -56,6 +56,9 @@ export const storiesApi = {
       method: 'POST',
       body: JSON.stringify({ ...payload, userId: SYSTEM_USER_ID }),
     }),
+
+  getInFlightEpisode: (storyId: string) =>
+    request<{ id: string } | null>(`/stories/${storyId}/episodes/in-flight`),
 };
 
 // ── Episode ───────────────────────────────────────────────────────────────
@@ -136,6 +139,11 @@ export const pipelineApi = {
 
   status: (episodeId: string) =>
     request<PipelineStatus>(`/episodes/${episodeId}/pipeline/status`),
+
+  cancel: (episodeId: string) =>
+    request<{ episodeId: string; cancelled: boolean }>(`/episodes/${episodeId}/pipeline/cancel`, {
+      method: 'POST',
+    }),
 };
 
 export interface PipelineLogEntry {
@@ -230,5 +238,8 @@ export interface HealthStatus {
 }
 
 export const healthApi = {
-  check: () => fetch('/health').then((r) => r.json() as Promise<{ status: string; services: HealthStatus['services'] }>),
+  check: () =>
+    fetch('/health')
+      .then((r) => r.json())
+      .then((body) => body.data as { status: string; services: HealthStatus['services'] }),
 };

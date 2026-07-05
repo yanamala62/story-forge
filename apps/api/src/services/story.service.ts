@@ -182,6 +182,11 @@ export const StoryService = {
     return episodeRepo.findByStoryId(storyId, { page, limit });
   },
 
+  /** Returns the episode currently mid-pipeline for a story, if any — used to resume UI tracking. */
+  async getInFlightEpisode(storyId: string) {
+    return episodeRepo.findInFlightEpisode(storyId);
+  },
+
   async getAgentHealth() {
     return storyAgent.checkHealth();
   },
