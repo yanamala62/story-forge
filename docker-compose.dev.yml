@@ -9,9 +9,6 @@ networks:
 
 volumes:
   postgres_dev_data:
-  redis_dev_data:
-  comfyui_dev_models:
-  comfyui_dev_output:
 
 services:
   postgres:
@@ -35,60 +32,8 @@ services:
       timeout: 5s
       retries: 10
 
-  redis:
-    image: redis:7-alpine
-    restart: unless-stopped
-    command: >
-      redis-server
-      --requirepass storyforge_redis_password
-      --maxmemory 256mb
-      --maxmemory-policy allkeys-lru
-      --loglevel warning
-    volumes:
-      - redis_dev_data:/data
-    ports:
-      - "6379:6379"
-    networks:
-      - storyforge-dev
-    healthcheck:
-      test: ["CMD", "redis-cli", "-a", "storyforge_redis_password", "ping"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-
   # Ollama runs natively on Windows — no Docker container needed
   # Access at http://localhost:11434
-
-  comfyui:
-    image: ghcr.io/ai-dock/comfyui:latest-cpu
-    restart: unless-stopped
-    volumes:
-      - comfyui_dev_models:/opt/ComfyUI/models
-      - comfyui_dev_output:/opt/ComfyUI/output
-      - ./prompts/comfyui:/opt/ComfyUI/workflows:ro
-    ports:
-      - "8188:8188"
-    networks:
-      - storyforge-dev
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8188/system_stats"]
-      interval: 15s
-      timeout: 15s
-      retries: 5
-      start_period: 60s
-
-  # Redis GUI for development
-  redis-commander:
-    image: rediscommander/redis-commander:latest
-    restart: unless-stopped
-    environment:
-      - REDIS_HOSTS=local:redis:6379:0:storyforge_redis_password
-    ports:
-      - "8081:8081"
-    networks:
-      - storyforge-dev
-    depends_on:
-      - redis
 
   # Adminer for PostgreSQL GUI
   adminer:

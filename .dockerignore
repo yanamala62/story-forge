@@ -57,3 +57,9 @@ Thumbs.db
 # Docs and local dev tooling not needed to build/run.
 README*.md
 docker-compose*.yml
+
+# Frontend workspace — the only Dockerfile in this repo builds apps/api.
+# Excluding apps/web entirely (not just node_modules) keeps it from ever
+# being discovered as an npm workspace mid-build, which otherwise pulls
+# its React/UI dependencies into the backend image via hoisting.
+apps/web/

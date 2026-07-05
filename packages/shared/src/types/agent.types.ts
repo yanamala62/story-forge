@@ -40,36 +40,6 @@ export interface OllamaGenerateResponse {
   eval_count?: number;
 }
 
-export interface ComfyUIQueuePromptRequest {
-  prompt: Record<string, ComfyUINode>;
-  client_id?: string;
-}
-
-export interface ComfyUINode {
-  class_type: string;
-  inputs: Record<string, unknown>;
-}
-
-export interface ComfyUIQueuePromptResponse {
-  prompt_id: string;
-  number: number;
-  node_errors: Record<string, unknown>;
-}
-
-export interface ComfyUIHistoryOutput {
-  images: Array<{
-    filename: string;
-    subfolder: string;
-    type: string;
-  }>;
-}
-
-export interface PiperTTSRequest {
-  text: string;
-  voice?: string;
-  outputPath: string;
-}
-
 export interface WhisperTranscription {
   text: string;
   segments: WhisperSegment[];

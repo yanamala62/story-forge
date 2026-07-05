@@ -7,16 +7,14 @@ const environmentSchema = z.object({
   APP_NAME: z.string().default('StoryForge AI'),
   APP_VERSION: z.string().default('1.0.0'),
   LOG_LEVEL: z.enum(['error', 'warn', 'info', 'http', 'debug']).default('info'),
+  // Off by default — Render (and most PaaS) only capture stdout/stderr, so
+  // writing rotating log files nobody reads is pure overhead. Opt in for
+  // deployments that actually consume the file output.
+  LOG_TO_FILE: z.coerce.boolean().default(false),
 
   DATABASE_URL: z.string().url(),
   DATABASE_POOL_MIN: z.coerce.number().int().positive().default(2),
   DATABASE_POOL_MAX: z.coerce.number().int().positive().default(10),
-
-  REDIS_HOST: z.string().default('localhost'),
-  REDIS_PORT: z.coerce.number().int().positive().default(6379),
-  REDIS_PASSWORD: z.string().optional(),
-  REDIS_DB: z.coerce.number().int().nonnegative().default(0),
-  REDIS_URL: z.string().optional(),
 
   // LLM Provider: 'ollama' or 'openrouter'
   LLM_PROVIDER: z.enum(['ollama', 'openrouter']).default('ollama'),
@@ -40,15 +38,6 @@ const environmentSchema = z.object({
     ),
   OPENROUTER_TIMEOUT_MS: z.coerce.number().int().positive().default(120_000),
   OPENROUTER_MAX_RETRIES: z.coerce.number().int().positive().default(3),
-
-  COMFYUI_BASE_URL: z.string().url().default('http://localhost:8188'),
-  COMFYUI_TIMEOUT_MS: z.coerce.number().int().positive().default(300_000),
-  COMFYUI_MAX_RETRIES: z.coerce.number().int().positive().default(3),
-
-  PIPER_BINARY_PATH: z.string().default('piper'),
-  PIPER_MODEL_PATH: z.string().default('./models/piper/en_US-lessac-medium.onnx'),
-  PIPER_VOICE: z.string().default('en_US-lessac-medium'),
-  PIPER_SAMPLE_RATE: z.coerce.number().int().positive().default(22050),
 
   WHISPER_MODEL: z.string().default('base.en'),
   WHISPER_LANGUAGE: z.string().default('en'),
@@ -75,11 +64,6 @@ const environmentSchema = z.object({
   YOUTUBE_CLIENT_SECRET: z.string().optional(),
   YOUTUBE_REFRESH_TOKEN: z.string().optional(),
   YOUTUBE_CHANNEL_ID: z.string().optional(),
-
-  QUEUE_CONCURRENCY: z.coerce.number().int().positive().default(2),
-  QUEUE_MAX_RETRIES: z.coerce.number().int().positive().default(3),
-  QUEUE_RETRY_DELAY_MS: z.coerce.number().int().positive().default(5_000),
-  QUEUE_JOB_TIMEOUT_MS: z.coerce.number().int().positive().default(600_000),
 
   STORY_MAX_SCENES: z.coerce.number().int().positive().default(6),
   STORY_EPISODE_DURATION_SECONDS: z.coerce.number().int().positive().default(40),

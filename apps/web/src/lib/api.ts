@@ -1,4 +1,7 @@
-const BASE_URL = '/api';
+// Empty in dev (relies on the Vite proxy in vite.config.ts); set to the
+// deployed API's origin in production, since a static site has no proxy.
+const API_ORIGIN = import.meta.env.VITE_API_URL ?? '';
+const BASE_URL = `${API_ORIGIN}/api`;
 
 // System user — no auth yet
 export const SYSTEM_USER_ID = '00000000-0000-0000-0000-000000000001';
@@ -239,7 +242,7 @@ export interface HealthStatus {
 
 export const healthApi = {
   check: () =>
-    fetch('/health')
+    fetch(`${API_ORIGIN}/health`)
       .then((r) => r.json())
       .then((body) => body.data as { status: string; services: HealthStatus['services'] }),
 };

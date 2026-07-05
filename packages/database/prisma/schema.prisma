@@ -6,12 +6,13 @@
 
 generator client {
   provider      = "prisma-client-js"
-  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+  binaryTargets = ["native", "debian-openssl-3.0.x"]
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 // =============================================================================
@@ -442,9 +443,6 @@ model Upload {
 
 enum Platform {
   YOUTUBE
-  INSTAGRAM
-  TIKTOK
-  FACEBOOK
 }
 
 enum UploadStatus {
@@ -501,37 +499,3 @@ model Setting {
   @@map("settings")
 }
 
-// =============================================================================
-// QUEUE JOBS (BullMQ audit log)
-// =============================================================================
-
-model QueueJob {
-  id          String    @id @default(uuid())
-  jobId       String    @unique @map("job_id")
-  queue       String
-  name        String
-  data        Json
-  status      JobStatus @default(PENDING)
-  attempts    Int       @default(0)
-  maxAttempts Int       @default(3) @map("max_attempts")
-  error       String?   @db.Text
-  result      Json?
-  startedAt   DateTime? @map("started_at")
-  completedAt DateTime? @map("completed_at")
-  createdAt   DateTime  @default(now()) @map("created_at")
-  updatedAt   DateTime  @updatedAt @map("updated_at")
-
-  @@index([queue])
-  @@index([status])
-  @@index([jobId])
-  @@map("queue_jobs")
-}
-
-enum JobStatus {
-  PENDING
-  ACTIVE
-  COMPLETED
-  FAILED
-  DELAYED
-  PAUSED
-}

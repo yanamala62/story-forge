@@ -70,21 +70,9 @@ export class OllamaError extends ExternalServiceError {
   }
 }
 
-export class ComfyUIError extends ExternalServiceError {
-  constructor(message: string, details?: unknown) {
-    super('ComfyUI', message, details);
-  }
-}
-
 export class FFmpegError extends AppError {
   constructor(message: string, details?: unknown) {
     super(`FFmpeg error: ${message}`, 'FFMPEG_ERROR', 500, true, details);
-  }
-}
-
-export class QueueError extends AppError {
-  constructor(message: string, details?: unknown) {
-    super(`Queue error: ${message}`, 'QUEUE_ERROR', 500, true, details);
   }
 }
 
