@@ -42,7 +42,7 @@ export const swaggerOptions = {
     },
     servers: [
       { url: `http://localhost:${config.APP_PORT}`, description: 'Development' },
-      { url: 'https://api.storyforge.ai', description: 'Production' },
+      { url: 'https://story-forge-ctc8.onrender.com', description: 'Production' },
     ],
     components: {
       securitySchemes: {
