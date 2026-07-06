@@ -122,10 +122,6 @@ async function checkOpenRouter(): Promise<ServiceHealth> {
   const start = Date.now();
   const env = getEnv();
 
-  if (env.LLM_PROVIDER !== 'openrouter' || !env.OPENROUTER_API_KEY) {
-    return serviceHealth('unknown', { error: 'Not configured (LLM_PROVIDER != openrouter or no API key)' });
-  }
-
   try {
     const response = await fetch('https://openrouter.ai/api/v1/key', {
       headers: { Authorization: `Bearer ${env.OPENROUTER_API_KEY}` },

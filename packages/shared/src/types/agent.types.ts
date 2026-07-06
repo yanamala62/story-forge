@@ -12,34 +12,6 @@ export interface AgentConfig {
   timeoutMs: number;
 }
 
-export interface OllamaMessage {
-  role: 'system' | 'user' | 'assistant';
-  content: string;
-}
-
-export interface OllamaGenerateRequest {
-  model: string;
-  messages: OllamaMessage[];
-  stream?: boolean;
-  options?: {
-    temperature?: number;
-    top_p?: number;
-    top_k?: number;
-    num_predict?: number;
-    stop?: string[];
-  };
-  format?: 'json';
-}
-
-export interface OllamaGenerateResponse {
-  model: string;
-  created_at: string;
-  message: OllamaMessage;
-  done: boolean;
-  total_duration?: number;
-  eval_count?: number;
-}
-
 export interface WhisperTranscription {
   text: string;
   segments: WhisperSegment[];

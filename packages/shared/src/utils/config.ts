@@ -16,17 +16,8 @@ const environmentSchema = z.object({
   DATABASE_POOL_MIN: z.coerce.number().int().positive().default(2),
   DATABASE_POOL_MAX: z.coerce.number().int().positive().default(10),
 
-  // LLM Provider: 'ollama' or 'openrouter'
-  LLM_PROVIDER: z.enum(['ollama', 'openrouter']).default('ollama'),
-
-  OLLAMA_BASE_URL: z.string().url().default('http://localhost:11434'),
-  OLLAMA_STORY_MODEL: z.string().default('qwen3:8b'),
-  OLLAMA_SEO_MODEL: z.string().default('llama3:8b'),
-  OLLAMA_TIMEOUT_MS: z.coerce.number().int().positive().default(120_000),
-  OLLAMA_MAX_RETRIES: z.coerce.number().int().positive().default(3),
-
-  // OpenRouter
-  OPENROUTER_API_KEY: z.string().optional(),
+  // OpenRouter — the only LLM provider this app uses.
+  OPENROUTER_API_KEY: z.string(),
   OPENROUTER_STORY_MODEL: z.string().default('qwen/qwen3-8b:free'),
   OPENROUTER_SEO_MODEL: z.string().default('qwen/qwen3-8b:free'),
   // Comma-separated fallback models tried in order if the primary model is
@@ -39,7 +30,10 @@ const environmentSchema = z.object({
   OPENROUTER_TIMEOUT_MS: z.coerce.number().int().positive().default(120_000),
   OPENROUTER_MAX_RETRIES: z.coerce.number().int().positive().default(3),
 
-  WHISPER_MODEL: z.string().default('base.en'),
+  // tiny.en over base.en — meaningfully lower memory footprint for the
+  // faster-whisper subprocess, which matters on memory-constrained hosts
+  // (e.g. Render's free 512MB tier), at some cost to transcription accuracy.
+  WHISPER_MODEL: z.string().default('tiny.en'),
   WHISPER_LANGUAGE: z.string().default('en'),
   WHISPER_DEVICE: z.enum(['cpu', 'cuda']).default('cpu'),
 

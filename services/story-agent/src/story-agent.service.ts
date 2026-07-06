@@ -1,7 +1,7 @@
 import { createLogger, getEnv, AgentError } from '@storyforge/shared';
 import type { StoryGenre, ImageStyle } from '@storyforge/shared';
 import type { StoryWithDetails } from '@storyforge/database';
-import { createLLMClient } from './clients/llm.factory.js';
+import { OpenRouterClient } from './clients/openrouter.client.js';
 import type { ILLMClient } from './clients/llm.interface.js';
 import { EpisodeGenerator } from './generators/episode.generator.js';
 import { buildInitialMemory, applyEpisodeToMemory } from './memory/memory.builder.js';
@@ -24,39 +24,25 @@ export class StoryAgentService {
   private readonly generator: EpisodeGenerator;
   private readonly env: ReturnType<typeof getEnv>;
   private readonly storyModel: string;
-  private readonly provider: string;
 
   constructor() {
     this.env = getEnv();
-    this.provider = this.env.LLM_PROVIDER;
 
-    this.llm = createLLMClient({
-      provider: this.env.LLM_PROVIDER,
-      ollama: {
-        baseUrl: this.env.OLLAMA_BASE_URL,
-        timeoutMs: this.env.OLLAMA_TIMEOUT_MS,
-        maxRetries: this.env.OLLAMA_MAX_RETRIES,
-      },
-      openrouter: {
-        apiKey: this.env.OPENROUTER_API_KEY ?? '',
-        timeoutMs: this.env.OPENROUTER_TIMEOUT_MS,
-        maxRetries: this.env.OPENROUTER_MAX_RETRIES,
-        fallbackModels: this.env.OPENROUTER_FALLBACK_MODELS.split(',')
-          .map((m) => m.trim())
-          .filter(Boolean),
-      },
+    this.llm = new OpenRouterClient({
+      apiKey: this.env.OPENROUTER_API_KEY,
+      timeoutMs: this.env.OPENROUTER_TIMEOUT_MS,
+      maxRetries: this.env.OPENROUTER_MAX_RETRIES,
+      fallbackModels: this.env.OPENROUTER_FALLBACK_MODELS.split(',')
+        .map((m) => m.trim())
+        .filter(Boolean),
     });
 
-    // Pick model based on provider
-    this.storyModel =
-      this.env.LLM_PROVIDER === 'openrouter'
-        ? this.env.OPENROUTER_STORY_MODEL
-        : this.env.OLLAMA_STORY_MODEL;
+    this.storyModel = this.env.OPENROUTER_STORY_MODEL;
 
     this.generator = new EpisodeGenerator(this.llm);
 
     logger.info('StoryAgentService initialized', {
-      provider: this.provider,
+      provider: 'openrouter',
       model: this.storyModel,
     });
   }
@@ -68,7 +54,7 @@ export class StoryAgentService {
       storyId: story.id,
       storyTitle: story.title,
       episodeNumber,
-      provider: this.provider,
+      provider: 'openrouter',
       model: this.storyModel,
     });
 
@@ -76,7 +62,7 @@ export class StoryAgentService {
     if (!available) {
       throw new AgentError(
         'story-agent',
-        `LLM provider "${this.provider}" is not available. Check your API key or connection.`,
+        `OpenRouter is not available. Check your API key or connection.`,
       );
     }
 
@@ -128,7 +114,7 @@ export class StoryAgentService {
       episodeNumber,
       title: generatedEpisode.title,
       sceneCount: generatedEpisode.scenes.length,
-      provider: this.provider,
+      provider: 'openrouter',
     });
 
     return { episode: generatedEpisode, updatedMemory };
@@ -141,7 +127,7 @@ export class StoryAgentService {
   }> {
     const available = await this.llm.isAvailable();
     return {
-      provider: this.provider,
+      provider: 'openrouter',
       model: this.storyModel,
       available,
     };

@@ -36,7 +36,7 @@ router.get('/:id', async (req: Request, res: Response) => {
  * @swagger
  * /api/episodes/agent/health:
  *   get:
- *     summary: Check Story Agent and Ollama health
+ *     summary: Check Story Agent and OpenRouter health
  *     tags: [Episodes, Health]
  *     security: []
  *     responses:

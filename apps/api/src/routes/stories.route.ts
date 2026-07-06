@@ -128,7 +128,7 @@ router.get('/:id', async (req: Request, res: Response) => {
  * /api/stories/{id}/episodes:
  *   post:
  *     summary: Generate the next episode for a story
- *     description: Triggers the Story Agent to generate a new episode using Ollama LLM
+ *     description: Triggers the Story Agent to generate a new episode using OpenRouter LLM
  *     tags: [Stories, Episodes]
  *     parameters:
  *       - in: path
@@ -141,7 +141,7 @@ router.get('/:id', async (req: Request, res: Response) => {
  *       404:
  *         description: Story not found
  *       502:
- *         description: Ollama/AI service error
+ *         description: OpenRouter/AI service error
  */
 router.post('/:id/episodes', async (req: Request, res: Response) => {
   const result = await StoryService.generateEpisode(req.params['id'] as string);

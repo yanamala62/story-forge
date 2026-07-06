@@ -45,5 +45,15 @@ export const PipelineLogBus = {
 
   clear(episodeId: string): void {
     buffers.delete(episodeId);
+
+    // Also drop the emitter itself — otherwise one accumulates per distinct
+    // episode ID for the life of the process (buffers alone are bounded by
+    // MAX_BUFFER, but this Map never shrunk). Only evict when nobody's
+    // actively subscribed, so an open SSE stream from a previous run is
+    // never yanked out from under a live listener.
+    const emitter = emitters.get(episodeId);
+    if (emitter && emitter.listenerCount('log') === 0) {
+      emitters.delete(episodeId);
+    }
   },
 };

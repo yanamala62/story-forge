@@ -1,8 +1,6 @@
 export { StoryAgentService } from './story-agent.service.js';
 export type { GenerateEpisodeOptions, GenerateEpisodeResult } from './story-agent.service.js';
-export { OllamaClient } from './clients/ollama.client.js';
 export { OpenRouterClient } from './clients/openrouter.client.js';
-export { createLLMClient } from './clients/llm.factory.js';
 export type { ILLMClient, LLMMessage, LLMChatOptions } from './clients/llm.interface.js';
 export { EpisodeGenerator } from './generators/episode.generator.js';
 export { buildInitialMemory, applyEpisodeToMemory } from './memory/memory.builder.js';

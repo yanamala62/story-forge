@@ -64,9 +64,9 @@ export class ExternalServiceError extends AppError {
   }
 }
 
-export class OllamaError extends ExternalServiceError {
+export class LLMValidationError extends ExternalServiceError {
   constructor(message: string, details?: unknown) {
-    super('Ollama', message, details);
+    super('LLM', message, details);
   }
 }
 

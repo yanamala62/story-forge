@@ -58,7 +58,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 ENV PATH="/opt/venv/bin:$PATH"
 WORKDIR /app
 COPY requirements.txt ./
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt \
+    # pip/setuptools are only needed to install packages, not to run them —
+    # the app never invokes pip at runtime, only imports edge_tts/faster_whisper.
+    && rm -rf /opt/venv/lib/python3.11/site-packages/pip \
+              /opt/venv/lib/python3.11/site-packages/pip-*.dist-info \
+              /opt/venv/lib/python3.11/site-packages/setuptools \
+              /opt/venv/lib/python3.11/site-packages/setuptools-*.dist-info \
+              /opt/venv/bin/pip*
 
 # -----------------------------------------------
 # builder: full source, build in dependency order via turbo, then prune
@@ -73,7 +80,15 @@ RUN npm prune --omit=dev \
     # inside a workspace's own package.json (only root-level ones) — these
     # two are confirmed (via package-lock.json) to have no production-dependency
     # edges anywhere, so they're safe to remove explicitly.
-    && rm -rf node_modules/typescript node_modules/prisma
+    && rm -rf node_modules/typescript node_modules/prisma \
+    # ffprobe-static bundles a prebuilt ffprobe binary for every platform
+    # (darwin/linux/win32 x64/arm64, ~336MB) but its module (index.js) only
+    # computes `exports.path` as a string — it never checks the file exists.
+    # video-agent.service.ts only falls back to ffprobeStatic.path when
+    # FFPROBE_BINARY_PATH is left at its literal 'ffprobe' default; our
+    # Dockerfile always sets it to an explicit /usr/bin/ffprobe, so that
+    # fallback path is provably dead at runtime — safe to delete the binaries.
+    && rm -rf node_modules/ffprobe-static/bin
 
 # -----------------------------------------------
 # production: fresh minimal base — only runtime system packages, no
@@ -169,4 +184,11 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
 # mkdir (not just relying on the build-time symlink target) because /tmp may
 # be a fresh empty mount at container start on the actual host — see the
 # comment above the symlink RUN step for why.
-CMD ["sh", "-c", "mkdir -p /tmp/storyforge/generated /tmp/storyforge/logs && exec node dist/index.js"]
+#
+# --max-old-space-size caps Node's own V8 heap so it can't creep up and
+# starve the ffmpeg/faster-whisper child processes (separate OS processes,
+# outside V8's heap, but sharing the same container memory cgroup). This
+# helps but is not a full fix — on a 512MB host (e.g. Render's free tier),
+# native video encoding + ML transcription are inherently memory-hungry;
+# if OOMs persist after this, the real fix is a larger instance.
+CMD ["sh", "-c", "mkdir -p /tmp/storyforge/generated /tmp/storyforge/logs && exec node --max-old-space-size=384 dist/index.js"]
