@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { OllamaError } from '@storyforge/shared';
+import { LLMValidationError } from '@storyforge/shared';
 
 const SceneSchema = z.object({
   sceneNumber: z.number().int().positive(),
@@ -65,7 +65,7 @@ export function validateGeneratedEpisode(raw: unknown): ValidatedGeneratedEpisod
     const issues = result.error.issues
       .map((i) => `${i.path.join('.')}: ${i.message}`)
       .join('; ');
-    throw new OllamaError(`Generated episode failed validation: ${issues}`, {
+    throw new LLMValidationError(`Generated episode failed validation: ${issues}`, {
       issues: result.error.issues,
     });
   }

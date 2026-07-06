@@ -1,5 +1,5 @@
 import { createLogger, getEnv, AgentError, ExternalServiceError } from '@storyforge/shared';
-import { createLLMClient } from '@storyforge/story-agent';
+import { OpenRouterClient } from '@storyforge/story-agent';
 import type { ILLMClient } from '@storyforge/story-agent';
 import { buildSeoPrompt, type SeoPromptContext } from './prompts/seo.prompts.js';
 
@@ -43,27 +43,18 @@ export class SeoAgentService {
   constructor() {
     const env = getEnv();
 
-    this.llm = createLLMClient({
-      provider: env.LLM_PROVIDER,
-      ollama: {
-        baseUrl: env.OLLAMA_BASE_URL,
-        timeoutMs: env.OLLAMA_TIMEOUT_MS,
-        maxRetries: env.OLLAMA_MAX_RETRIES,
-      },
-      openrouter: {
-        apiKey: env.OPENROUTER_API_KEY ?? '',
-        timeoutMs: env.OPENROUTER_TIMEOUT_MS,
-        maxRetries: env.OPENROUTER_MAX_RETRIES,
-        fallbackModels: env.OPENROUTER_FALLBACK_MODELS.split(',')
-          .map((m) => m.trim())
-          .filter(Boolean),
-      },
+    this.llm = new OpenRouterClient({
+      apiKey: env.OPENROUTER_API_KEY,
+      timeoutMs: env.OPENROUTER_TIMEOUT_MS,
+      maxRetries: env.OPENROUTER_MAX_RETRIES,
+      fallbackModels: env.OPENROUTER_FALLBACK_MODELS.split(',')
+        .map((m) => m.trim())
+        .filter(Boolean),
     });
 
-    this.model =
-      env.LLM_PROVIDER === 'openrouter' ? env.OPENROUTER_SEO_MODEL : env.OLLAMA_SEO_MODEL;
+    this.model = env.OPENROUTER_SEO_MODEL;
 
-    logger.info('SeoAgentService initialized', { model: this.model, provider: env.LLM_PROVIDER });
+    logger.info('SeoAgentService initialized', { model: this.model, provider: 'openrouter' });
   }
 
   async generateSeo(input: GenerateSeoInput): Promise<GenerateSeoResult> {
