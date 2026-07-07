@@ -93,9 +93,10 @@ function CreateStoryDialog({ onCreated }: { onCreated: () => void }) {
 
 export function StoriesPage() {
   const qc = useQueryClient();
+  const [languageFilter, setLanguageFilter] = useState<string>('ALL');
   const { data, isLoading } = useQuery({
-    queryKey: ['stories', SYSTEM_USER_ID],
-    queryFn: () => storiesApi.list(1, 50),
+    queryKey: ['stories', SYSTEM_USER_ID, languageFilter],
+    queryFn: () => storiesApi.list(1, 50, languageFilter === 'ALL' ? undefined : languageFilter),
   });
 
   const stories = data?.data ?? [];
@@ -107,7 +108,16 @@ export function StoriesPage() {
           <h1 className="text-2xl font-bold">Stories</h1>
           <p className="text-sm text-muted-foreground mt-1">{data?.total ?? 0} active stories</p>
         </div>
-        <CreateStoryDialog onCreated={() => void qc.invalidateQueries({ queryKey: ['stories', SYSTEM_USER_ID] })} />
+        <div className="flex items-center gap-3">
+          <Select value={languageFilter} onValueChange={setLanguageFilter}>
+            <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">All languages</SelectItem>
+              {LANGUAGES.map((l) => <SelectItem key={l.value} value={l.value}>{l.label}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <CreateStoryDialog onCreated={() => void qc.invalidateQueries({ queryKey: ['stories', SYSTEM_USER_ID] })} />
+        </div>
       </div>
 
       {isLoading ? (

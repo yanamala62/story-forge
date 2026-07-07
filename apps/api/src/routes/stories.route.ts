@@ -1,6 +1,7 @@
 import { Router, type Request, type Response } from 'express';
 import { StoryService } from '../services/story.service.js';
 import type { ApiResponse } from '@storyforge/shared';
+import type { ContentLanguage } from '@storyforge/database';
 
 const router = Router();
 
@@ -74,6 +75,10 @@ router.post('/', async (req: Request, res: Response) => {
  *       - in: query
  *         name: limit
  *         schema: { type: integer, default: 20 }
+ *       - in: query
+ *         name: language
+ *         schema: { type: string, enum: [EN, HI, TE] }
+ *         description: Filter to stories in this language only
  *     responses:
  *       200:
  *         description: Paginated list of stories
@@ -81,9 +86,10 @@ router.post('/', async (req: Request, res: Response) => {
 router.get('/', async (req: Request, res: Response) => {
   const page = Number(req.query['page'] ?? 1);
   const limit = Number(req.query['limit'] ?? 20);
+  const language = req.query['language'] as ContentLanguage | undefined;
 
   // Single-operator mode — list all active stories regardless of userId
-  const result = await StoryService.listAllStories(page, limit);
+  const result = await StoryService.listAllStories(page, limit, language);
 
   const response: ApiResponse = {
     success: true,

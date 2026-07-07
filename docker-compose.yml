@@ -20,7 +20,6 @@ networks:
 
 volumes:
   postgres_data:
-  ollama_data:
   generated_content:
 
 services:
@@ -51,37 +50,6 @@ services:
       start_period: 30s
 
   # ---------------------------------------------------------------------------
-  # AI Services
-  # ---------------------------------------------------------------------------
-  ollama:
-    image: ollama/ollama:latest
-    <<: *restart-policy
-    logging: *default-logging
-    volumes:
-      - ollama_data:/root/.ollama
-    ports:
-      - "11434:11434"
-    networks:
-      - storyforge-net
-    environment:
-      - OLLAMA_KEEP_ALIVE=24h
-      - OLLAMA_NUM_PARALLEL=2
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 60s
-    # Uncomment for NVIDIA GPU support:
-    # deploy:
-    #   resources:
-    #     reservations:
-    #       devices:
-    #         - driver: nvidia
-    #           count: all
-    #           capabilities: [gpu]
-
-  # ---------------------------------------------------------------------------
   # Application Services
   # ---------------------------------------------------------------------------
   api:
@@ -95,7 +63,6 @@ services:
       - .env
     environment:
       - DATABASE_URL=postgresql://storyforge:storyforge_password@postgres:5432/storyforge_db
-      - OLLAMA_BASE_URL=http://ollama:11434
     ports:
       - "3000:3000"
     depends_on:
