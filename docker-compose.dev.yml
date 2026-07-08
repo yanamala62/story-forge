@@ -32,9 +32,6 @@ services:
       timeout: 5s
       retries: 10
 
-  # Ollama runs natively on Windows — no Docker container needed
-  # Access at http://localhost:11434
-
   # Adminer for PostgreSQL GUI
   adminer:
     image: adminer:latest

@@ -16,6 +16,12 @@ import {
   type PipelineStep,
 } from '@/lib/api';
 
+const LANGUAGES = [
+  { value: 'EN', label: 'English' },
+  { value: 'HI', label: 'Hindi' },
+  { value: 'TE', label: 'Telugu' },
+];
+
 const PENDING_STEPS: PipelineStep[] = [
   { id: 'M1', name: 'M1: Story + Scenes', status: 'pending' },
   { id: 'M2', name: 'M2: Images', status: 'pending' },
@@ -38,9 +44,11 @@ function levelColor(level: PipelineLogEntry['level']): string {
 export function SchedulerPage() {
   const qc = useQueryClient();
 
+  const [languageFilter, setLanguageFilter] = useState<string>('ALL');
+
   const { data: storiesData, isLoading: storiesLoading } = useQuery({
-    queryKey: ['stories-for-trigger'],
-    queryFn: () => storiesApi.list(1, 100),
+    queryKey: ['stories-for-trigger', languageFilter],
+    queryFn: () => storiesApi.list(1, 100, languageFilter === 'ALL' ? undefined : languageFilter),
   });
 
   const stories = storiesData?.data ?? [];
@@ -54,6 +62,12 @@ export function SchedulerPage() {
   useEffect(() => {
     setCancelRequested(false);
   }, [episodeId]);
+
+  // Changing the language filter invalidates the current selection — the
+  // story it pointed at may no longer be in the (re-fetched) list.
+  useEffect(() => {
+    setSelectedStoryId(undefined);
+  }, [languageFilter]);
 
   // Default to the most-recently-updated active story once the list loads
   useEffect(() => {
@@ -158,13 +172,35 @@ export function SchedulerPage() {
 
       <Card>
         <CardContent className="pt-6">
+          <div className="flex flex-wrap items-center gap-3 mb-4">
+            <Select value={languageFilter} onValueChange={setLanguageFilter}>
+              <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">All languages</SelectItem>
+                {LANGUAGES.map((l) => <SelectItem key={l.value} value={l.value}>{l.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+
           {storiesLoading ? null : stories.length === 0 ? (
             <p className="text-sm text-muted-foreground">
-              No active stories yet —{' '}
-              <Link to="/stories" className="text-primary underline">
-                create one first
-              </Link>
-              .
+              {languageFilter === 'ALL' ? (
+                <>
+                  No active stories yet —{' '}
+                  <Link to="/stories" className="text-primary underline">
+                    create one first
+                  </Link>
+                  .
+                </>
+              ) : (
+                <>
+                  No active stories in this language —{' '}
+                  <Link to="/stories" className="text-primary underline">
+                    create one
+                  </Link>{' '}
+                  or pick a different language above.
+                </>
+              )}
             </p>
           ) : (
             <div className="flex flex-wrap items-center gap-3">

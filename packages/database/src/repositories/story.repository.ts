@@ -95,16 +95,22 @@ export class StoryRepository extends BaseRepository {
     });
   }
 
-  async findAllActive(options: FindManyOptions = {}): Promise<PaginatedResult<Story>> {
+  async findAllActive(
+    options: FindManyOptions & { language?: ContentLanguage } = {},
+  ): Promise<PaginatedResult<Story>> {
     const { skip, take } = this.buildPagination(options);
+    const where = {
+      isActive: true,
+      ...(options.language && { language: options.language }),
+    };
     const [data, total] = await Promise.all([
       this.db.story.findMany({
-        where: { isActive: true },
+        where,
         orderBy: options.orderBy ?? { updatedAt: 'desc' },
         skip,
         take,
       }),
-      this.db.story.count({ where: { isActive: true } }),
+      this.db.story.count({ where }),
     ]);
     return this.buildPaginatedResult(data, total, options);
   }

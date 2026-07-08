@@ -1,5 +1,5 @@
 import { createLogger, NotFoundError, ConflictError, ValidationError } from '@storyforge/shared';
-import type { StoryGenre, ImageStyle } from '@storyforge/database';
+import type { StoryGenre, ImageStyle, ContentLanguage } from '@storyforge/database';
 import {
   StoryRepository,
   EpisodeRepository,
@@ -80,8 +80,8 @@ export const StoryService = {
     return storyRepo.findByUserId(userId, { page, limit });
   },
 
-  async listAllStories(page = 1, limit = 20) {
-    return storyRepo.findAllActive({ page, limit });
+  async listAllStories(page = 1, limit = 20, language?: ContentLanguage) {
+    return storyRepo.findAllActive({ page, limit, ...(language && { language }) });
   },
 
   async generateEpisode(storyId: string) {

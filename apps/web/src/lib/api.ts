@@ -47,9 +47,9 @@ export interface CreateStoryPayload {
 }
 
 export const storiesApi = {
-  list: (page = 1, limit = 20) =>
+  list: (page = 1, limit = 20, language?: string) =>
     request<{ data: Story[]; total: number; page: number; limit: number }>(
-      `/stories?page=${page}&limit=${limit}`,
+      `/stories?page=${page}&limit=${limit}${language ? `&language=${language}` : ''}`,
     ),
 
   get: (id: string) => request<Story>(`/stories/${id}`),
