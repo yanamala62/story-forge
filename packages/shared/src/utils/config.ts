@@ -39,8 +39,11 @@ const environmentSchema = z.object({
 
   FFMPEG_BINARY_PATH: z.string().default('ffmpeg'),
   FFPROBE_BINARY_PATH: z.string().default('ffprobe'),
-  VIDEO_WIDTH: z.coerce.number().int().positive().default(1080),
-  VIDEO_HEIGHT: z.coerce.number().int().positive().default(1920),
+  // 720x1280 (not full-HD 1080x1920) — still valid for YouTube Shorts, but
+  // meaningfully cuts ffmpeg's frame-buffer memory (~55% fewer pixels),
+  // which matters on a 512MB host where ffmpeg OOM'd at the higher resolution.
+  VIDEO_WIDTH: z.coerce.number().int().positive().default(720),
+  VIDEO_HEIGHT: z.coerce.number().int().positive().default(1280),
   VIDEO_FPS: z.coerce.number().int().positive().default(30),
   VIDEO_CODEC: z.string().default('libx264'),
   VIDEO_CRF: z.coerce.number().int().nonnegative().default(23),

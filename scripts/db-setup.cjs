@@ -48,17 +48,14 @@ console.log('[db-setup] Seeding system user…');
 const seedSql = path.join(dbDir, 'prisma', 'migrations', 'seed.sql');
 if (fs.existsSync(seedSql)) {
   try {
-    execSync(
-      `docker exec storyforgeai-postgres-1 psql -U storyforge -d storyforge_db -c "${
-        fs.readFileSync(seedSql, 'utf-8')
-          .replace(/\n/g, ' ')
-          .replace(/"/g, '\\"')
-      }"`,
-      { stdio: 'inherit' },
-    );
+    execSync(`npx prisma db execute --file "${seedSql}" --url "${DATABASE_URL}"`, {
+      cwd: dbDir,
+      env: { ...env, DATABASE_URL },
+      stdio: 'inherit',
+    });
     console.log('[db-setup] Seed complete.');
   } catch {
-    console.warn('[db-setup] Seed skipped (docker exec failed — container may not be named storyforgeai-postgres-1).');
+    console.warn('[db-setup] Seed skipped (prisma db execute failed).');
   }
 } else {
   console.log('[db-setup] No seed.sql found, skipping.');
