@@ -9,7 +9,7 @@
     "services/*"
   ],
   "scripts": {
-    "start": "docker compose -f docker-compose.dev.yml up -d --wait postgres && node scripts/db-setup.cjs && turbo run dev --filter=@storyforge/api --filter=@storyforge/web",
+    "start": "node scripts/db-setup.cjs && turbo run dev --filter=@storyforge/api --filter=@storyforge/web",
     "dev": "turbo run dev --filter=@storyforge/api --filter=@storyforge/web",
     "dev:all": "turbo run dev",
     "build": "turbo run build",
@@ -21,11 +21,7 @@
     "db:migrate:deploy": "turbo run db:migrate:deploy",
     "db:seed": "turbo run db:seed",
     "db:studio": "cd packages/database && npx prisma studio",
-    "docker:dev": "docker compose -f docker-compose.dev.yml up -d",
-    "docker:dev:down": "docker compose -f docker-compose.dev.yml down",
-    "docker:up": "docker compose up -d --build",
-    "docker:down": "docker compose down",
-    "docker:logs": "docker compose logs -f",
+    "docker:build": "docker build -f apps/api/Dockerfile -t storyforge-api:latest .",
     "setup": "bash scripts/setup.sh",
     "clean": "turbo run clean && rimraf node_modules"
   },

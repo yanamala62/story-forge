@@ -187,8 +187,10 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
 #
 # --max-old-space-size caps Node's own V8 heap so it can't creep up and
 # starve the ffmpeg/faster-whisper child processes (separate OS processes,
-# outside V8's heap, but sharing the same container memory cgroup). This
-# helps but is not a full fix — on a 512MB host (e.g. Render's free tier),
-# native video encoding + ML transcription are inherently memory-hungry;
-# if OOMs persist after this, the real fix is a larger instance.
-CMD ["sh", "-c", "mkdir -p /tmp/storyforge/generated /tmp/storyforge/logs && exec node --max-old-space-size=384 dist/index.js"]
+# outside V8's heap, but sharing the same container memory cgroup). 384MB
+# left too little headroom for ffmpeg on a 512MB host — an OOM there kills
+# the whole process with no chance to log anything, which looks like the
+# pipeline just froze rather than failed. 256MB leaves real headroom, paired
+# with the lower default video resolution (see VIDEO_WIDTH/HEIGHT). If OOMs
+# persist after this, the real fix is a larger instance.
+CMD ["sh", "-c", "mkdir -p /tmp/storyforge/generated /tmp/storyforge/logs && exec node --max-old-space-size=256 dist/index.js"]
