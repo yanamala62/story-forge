@@ -16,6 +16,8 @@ export interface GenerateSubtitlesInput {
   audioPath: string;
   language?: string;
   modelSize?: string;
+  /** Real-time progress callback forwarded from the subtitle pipeline. */
+  onProgress?: (level: 'info' | 'warn', message: string) => void;
 }
 
 export interface GenerateSubtitlesResult {
@@ -42,6 +44,7 @@ export class SubtitleAgentService {
     const language = input.language ?? 'EN';
     const modelSize = input.modelSize ?? this.whisperModel;
     const whisperLang = WHISPER_LANG[language] ?? 'en';
+    const { onProgress } = input;
 
     logger.info('Starting subtitle generation', {
       episodeId,
@@ -68,6 +71,7 @@ export class SubtitleAgentService {
         outputSrtPath: outputPath,
         modelSize,
         language: whisperLang,
+        ...(onProgress !== undefined && { onProgress }),
       });
 
       logger.info('Subtitle generation complete', {

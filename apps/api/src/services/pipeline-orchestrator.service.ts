@@ -20,6 +20,7 @@ import { SubtitlePipelineService } from './subtitle-pipeline.service.js';
 import { VideoPipelineService } from './video-pipeline.service.js';
 import { SeoPipelineService } from './seo-pipeline.service.js';
 import { UploadPipelineService } from './upload-pipeline.service.js';
+import { runRetentionForStory } from './episode-retention.service.js';
 
 const logger = createLogger('pipeline-orchestrator');
 
@@ -184,10 +185,15 @@ export const PipelineOrchestratorService = {
 
     const pipelineStart = Date.now();
 
+    // Hoisted so the finally block can access storyId for retention cleanup
+    // even when the try block exits early (e.g. episode not found).
+    let storyId: string | null = null;
+
     try {
       // ── Load episode ───────────────────────────────────────────────────────
       const episode = await episodeRepo.findById(episodeId);
       if (!episode) throw new NotFoundError('Episode', episodeId);
+      storyId = episode.storyId;
 
       if (episode.status === 'PUBLISHED') {
         logger.info('Pipeline skipped — episode already published', { episodeId });
@@ -417,6 +423,20 @@ export const PipelineOrchestratorService = {
     } finally {
       runningEpisodes.delete(episodeId);
       cancelledEpisodes.delete(episodeId);
+
+      // ── Retention cleanup — runs after every terminal pipeline outcome ────
+      // Errors are caught here so a retention bug CANNOT fail a successful pipeline.
+      // storyId is null only if the episode DB row wasn't found (extremely rare edge
+      // case) — in that case there's nothing to clean up for this story anyway.
+      if (storyId) {
+        void runRetentionForStory(storyId).catch((err) =>
+          logger.error('Retention cleanup crashed unexpectedly', {
+            storyId,
+            episodeId,
+            error: err instanceof Error ? err.message : String(err),
+          }),
+        );
+      }
     }
   },
 

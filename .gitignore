@@ -1,69 +1,147 @@
-# Dependencies
+# ─── Dependencies ─────────────────────────────────────────────────────────────
 node_modules/
 .pnp
 .pnp.js
 
-# Build outputs
+# ─── Build outputs ────────────────────────────────────────────────────────────
 dist/
 build/
 out/
 .next/
 
-# TypeScript cache
+# ─── TypeScript incremental build cache ──────────────────────────────────────
 *.tsbuildinfo
 tsconfig.tsbuildinfo
 
-# Environment files
+# ─── Environment / secrets (NEVER commit real env files) ─────────────────────
 .env
 .env.local
 .env.*.local
+.env.docker
+# Keep the examples so new devs know what vars are needed
 !.env.example
+!.env.docker.example
 
-# Logs
+# ─── Logs ─────────────────────────────────────────────────────────────────────
 logs/
 *.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+pnpm-debug.log*
 lerna-debug.log*
 
-# OS files
+# ─── OS files ─────────────────────────────────────────────────────────────────
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
 Thumbs.db
+desktop.ini
 *.swp
 *.swo
+*~
 
-# IDE
+# ─── IDE / editor ────────────────────────────────────────────────────────────
 .vscode/
 .idea/
 *.sublime-project
 *.sublime-workspace
+.fleet/
+*.code-workspace
 
-# Generated AI content (large files)
+# ─── AI / generated content (large runtime files) ────────────────────────────
+# Images, audio, video, subtitles produced by the pipeline at runtime
 generated/
 !generated/.gitkeep
 
-# Models (large binary files)
+# ─── ML model weights (large binary downloads) ───────────────────────────────
 models/
 !models/.gitkeep
+# faster-whisper model cache (downloaded at runtime)
+.cache/
+**/whisper_cache/
+**/.cache/huggingface/
 
-# Prisma
+# ─── Prisma / database ───────────────────────────────────────────────────────
 packages/database/node_modules/
 packages/database/dist/
+# Local SQLite dev database (if used)
+*.db
+*.sqlite
+*.sqlite3
 
-# Coverage
+# ─── Test coverage ───────────────────────────────────────────────────────────
 coverage/
 *.lcov
 .nyc_output/
 
-# Turbo
+# ─── Playwright e2e test artifacts ───────────────────────────────────────────
+test-results/
+playwright-report/
+playwright/.cache/
+# Keep e2e source files — only ignore runtime output
+apps/web/test-results/
+apps/web/playwright-report/
+
+# ─── Turbo cache ─────────────────────────────────────────────────────────────
 .turbo/
 
-# Docker volumes
+# ─── Docker volumes / data ───────────────────────────────────────────────────
 docker/postgres/data/
 docker/redis/data/
+docker/data/
 
-# Temp files
+# ─── Temp / scratch files ────────────────────────────────────────────────────
 tmp/
 temp/
 *.tmp
+*.temp
+*.bak
+*.backup
+*.orig
+
+# ─── Python artifacts (subtitle-agent / whisper) ─────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist-info/
+venv/
+.venv/
+pip-wheel-metadata/
+
+# ─── FFmpeg temporary artifacts (video pipeline) ─────────────────────────────
+# concat list files and intermediate clips written by the video agent
+**/concat_list.txt
+**/clip_*.mp4
+**/clip_*.ts
+
+# ─── Supabase local ──────────────────────────────────────────────────────────
+.supabase/
+
+# ─── Package manager lock files (keep only one) ──────────────────────────────
+# Uncomment whichever you are NOT using to avoid committing both:
+# yarn.lock
+# pnpm-lock.yaml
+
+# ─── Miscellaneous ───────────────────────────────────────────────────────────
+*.pem
+*.p12
+*.key
+*.cert
+*.crt
+# Google service account keys
+*service-account*.json
+*credentials*.json
+# Never commit YouTube / OAuth tokens
+*token*.json
+*refresh_token*
+
+# ─── Error screenshots (project-specific) ────────────────────────────────────
+error/

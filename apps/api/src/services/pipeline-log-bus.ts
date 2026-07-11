@@ -8,7 +8,7 @@ export interface PipelineLogEntry {
   message: string;
 }
 
-const MAX_BUFFER = 500;
+const MAX_BUFFER = 1000;
 
 const emitters = new Map<string, EventEmitter>();
 const buffers = new Map<string, PipelineLogEntry[]>();
@@ -41,6 +41,24 @@ export const PipelineLogBus = {
     const emitter = getEmitter(episodeId);
     emitter.on('log', listener);
     return () => emitter.off('log', listener);
+  },
+
+  /**
+   * Append a separator line between pipeline runs so history is preserved.
+   * Previously this wiped the buffer, causing users to see a blank log panel
+   * immediately after triggering a retry.
+   */
+  separator(episodeId: string, label: string): void {
+    const entry: PipelineLogEntry = {
+      ts: new Date().toISOString(),
+      level: 'info',
+      message: `──────────── ${label} ────────────`,
+    };
+    const buffer = buffers.get(episodeId) ?? [];
+    buffer.push(entry);
+    if (buffer.length > MAX_BUFFER) buffer.shift();
+    buffers.set(episodeId, buffer);
+    getEmitter(episodeId).emit('log', entry);
   },
 
   clear(episodeId: string): void {
