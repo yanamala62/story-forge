@@ -145,3 +145,9 @@ pip-wheel-metadata/
 
 # ─── Error screenshots (project-specific) ────────────────────────────────────
 error/
+
+# ─── Local Scratch/Command files ─────────────────────────────────────────────
+runcommends
+*commands*
+*commends*
+

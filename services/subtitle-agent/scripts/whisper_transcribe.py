@@ -28,7 +28,7 @@ def format_srt_time(seconds: float) -> str:
     return f"{hours:02d}:{minutes:02d}:{secs:02d},{millis:03d}"
 
 
-def transcribe(audio_path: str, output_srt: str, model_size: str = "base", language: str = "en") -> None:
+def transcribe(audio_path: str, output_srt: str, model_size: str = "tiny", language: str = "en") -> None:
     """Transcribe audio using faster-whisper and write an SRT subtitle file."""
     try:
         from faster_whisper import WhisperModel
@@ -80,7 +80,7 @@ if __name__ == "__main__":
 
     audio_path = sys.argv[1]
     output_srt = sys.argv[2]
-    model_size = sys.argv[3] if len(sys.argv) > 3 else "base"
+    model_size = sys.argv[3] if len(sys.argv) > 3 else "tiny"
     language   = sys.argv[4] if len(sys.argv) > 4 else "en"
 
     transcribe(audio_path, output_srt, model_size, language)
