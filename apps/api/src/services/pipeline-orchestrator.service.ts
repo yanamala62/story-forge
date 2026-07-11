@@ -102,6 +102,7 @@ export interface PipelineStep {
   name: string;
   status: 'completed' | 'running' | 'failed' | 'pending';
   error?: string | null;
+  progress?: { done: number; total: number };
 }
 
 export interface PipelineStatusResult {

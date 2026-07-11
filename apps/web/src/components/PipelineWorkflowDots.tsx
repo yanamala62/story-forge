@@ -106,7 +106,10 @@ export function PipelineWorkflowDots({
 
                 <TooltipContent side="top" className="max-w-[220px]">
                   <p className="font-semibold">{step.name}</p>
-                  <p className="text-muted-foreground capitalize mt-0.5">{step.status}</p>
+                  <p className="text-muted-foreground capitalize mt-0.5">
+                    {step.status}
+                    {step.progress && ` — ${step.progress.done}/${step.progress.total}`}
+                  </p>
                   {step.error && (
                     <p className="text-red-400 mt-1 break-words text-[11px] leading-snug">
                       {step.error}
@@ -118,7 +121,19 @@ export function PipelineWorkflowDots({
               {showLabels && (
                 <span className="text-[10px] text-muted-foreground whitespace-nowrap">
                   {SHORT_LABELS[step.id] ?? step.id}
+                  {step.status === 'running' && step.progress && (
+                    <span className="text-blue-400 font-medium"> {step.progress.done}/{step.progress.total}</span>
+                  )}
                 </span>
+              )}
+
+              {step.status === 'running' && step.progress && (
+                <div className="h-0.5 w-10 rounded-full bg-muted-foreground/20 overflow-hidden">
+                  <div
+                    className="h-full bg-blue-400 transition-all"
+                    style={{ width: `${Math.min(100, (step.progress.done / step.progress.total) * 100)}%` }}
+                  />
+                </div>
               )}
             </div>
           </Fragment>

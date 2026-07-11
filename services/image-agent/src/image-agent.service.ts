@@ -35,7 +35,10 @@ export class ImageAgentService {
     this.height = env.VIDEO_HEIGHT;
   }
 
-  async generateImage(input: GenerateImageInput): Promise<GenerateImageResult> {
+  async generateImage(
+    input: GenerateImageInput,
+    onRetry?: (sceneNumber: number, attempt: number, maxAttempts: number, error: string) => void,
+  ): Promise<GenerateImageResult> {
     const filename = `scene-${String(input.sceneNumber).padStart(2, '0')}.png`;
     const lang = (input.language ?? 'EN').toLowerCase();
     // Language-prefixed path: generated/images/<lang>/<episodeId>/scene-01.png
@@ -56,14 +59,18 @@ export class ImageAgentService {
     });
 
     try {
-      const result = await generateImageWithPollinations({
-        positivePrompt: input.positivePrompt,
-        negativePrompt: input.negativePrompt,
-        width: this.width,
-        height: this.height,
-        seed: input.seed,
-        outputPath,
-      });
+      const result = await generateImageWithPollinations(
+        {
+          positivePrompt: input.positivePrompt,
+          negativePrompt: input.negativePrompt,
+          width: this.width,
+          height: this.height,
+          seed: input.seed,
+          outputPath,
+        },
+        (attempt, maxAttempts, error) =>
+          onRetry?.(input.sceneNumber, attempt, maxAttempts, error),
+      );
 
       logger.info('Image generated successfully', {
         sceneNumber: input.sceneNumber,
@@ -93,13 +100,14 @@ export class ImageAgentService {
   async generateImagesForEpisode(
     inputs: GenerateImageInput[],
     onProgress?: (sceneNumber: number, total: number) => void,
+    onRetry?: (sceneNumber: number, attempt: number, maxAttempts: number, error: string) => void,
   ): Promise<GenerateImageResult[]> {
     const results: GenerateImageResult[] = [];
 
     // Generate sequentially to respect Pollinations rate limits
     for (let i = 0; i < inputs.length; i++) {
       const input = inputs[i]!;
-      const result = await this.generateImage(input);
+      const result = await this.generateImage(input, onRetry);
       results.push(result);
       onProgress?.(i + 1, inputs.length);
 

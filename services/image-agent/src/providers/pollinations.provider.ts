@@ -24,6 +24,7 @@ export interface PollinationsResult {
 
 export async function generateImageWithPollinations(
   request: PollinationsRequest,
+  onRetry?: (attempt: number, maxAttempts: number, error: string) => void,
 ): Promise<PollinationsResult> {
   const { positivePrompt, negativePrompt, width, height, seed, outputPath } = request;
 
@@ -51,10 +52,9 @@ export async function generateImageWithPollinations(
       initialDelayMs: 5000,
       maxDelayMs: 20000,
       onRetry: (err, attempt) => {
-        logger.warn('Retrying Pollinations request', {
-          attempt,
-          error: err instanceof Error ? err.message : String(err),
-        });
+        const message = err instanceof Error ? err.message : String(err);
+        logger.warn('Retrying Pollinations request', { attempt, error: message });
+        onRetry?.(attempt, 3, message);
       },
     },
   );

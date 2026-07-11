@@ -8,6 +8,8 @@ import {
   StoryRepository,
 } from '@storyforge/database';
 import { VideoAgentService } from '@storyforge/video-agent';
+import { PipelineLogBus } from './pipeline-log-bus.js';
+import { PipelineProgress } from './pipeline-progress.js';
 
 const logger = createLogger('video-pipeline');
 
@@ -79,6 +81,16 @@ export const VideoPipelineService = {
         audioPath: audioFile.localPath,
         subtitlePath: subtitleFile.localPath,
         language,
+        onProgress: (done, total, phase) => {
+          PipelineProgress.set(episodeId, done, total);
+          PipelineLogBus.emit(
+            episodeId,
+            'info',
+            phase === 'clip'
+              ? `Rendering clip ${done}/${total - 1}`
+              : 'Compositing final video (audio + subtitles)...',
+          );
+        },
       });
     } finally {
       await Promise.all([
