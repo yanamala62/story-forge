@@ -12,6 +12,7 @@ export interface ComposeEpisodeVideoInput {
   audioPath: string;
   subtitlePath: string;
   language?: string;
+  onProgress?: (done: number, total: number, phase: 'clip' | 'compose') => void;
 }
 
 export interface ComposeEpisodeVideoResult {
@@ -63,7 +64,7 @@ export class VideoAgentService {
   }
 
   async composeVideo(input: ComposeEpisodeVideoInput): Promise<ComposeEpisodeVideoResult> {
-    const { episodeId, imagePaths, audioPath, subtitlePath } = input;
+    const { episodeId, imagePaths, audioPath, subtitlePath, onProgress } = input;
 
     if (!imagePaths.length) {
       throw new AgentError('video-agent', 'No images provided');
@@ -89,6 +90,7 @@ export class VideoAgentService {
         fps: this.fps,
         crf: this.crf,
         codec: this.codec,
+        ...(onProgress && { onProgress }),
       });
 
       await generateThumbnail(this.ffmpegPath, outputPath, thumbnailPath);

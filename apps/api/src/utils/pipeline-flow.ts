@@ -4,6 +4,7 @@
  * information to the terminal.
  */
 import { PipelineLogBus } from '../services/pipeline-log-bus.js';
+import { PipelineProgress } from '../services/pipeline-progress.js';
 
 function ts(): string {
   return new Date().toLocaleTimeString('en-US', { hour12: false });
@@ -32,6 +33,7 @@ export const pipelineFlow = {
     divider('├');
 
     PipelineLogBus.clear(episodeId);
+    PipelineProgress.clear(episodeId);
     PipelineLogBus.emit(episodeId, 'info', `Pipeline triggered for episode ${episodeNumber} (current status: ${currentStatus})`);
     PipelineLogBus.emit(episodeId, 'info', `Upload to YouTube: ${uploadToYoutube ? 'yes' : 'no'}`);
   },
@@ -53,6 +55,7 @@ export const pipelineFlow = {
 
   stepDone(episodeId: string, name: string, elapsedMs: number): void {
     line('🟢', 'DONE', name, `✓  ${(elapsedMs / 1000).toFixed(1)}s`);
+    PipelineProgress.clear(episodeId);
     PipelineLogBus.emit(episodeId, 'success', `${name} done in ${(elapsedMs / 1000).toFixed(1)}s — moving to next step`);
   },
 
@@ -64,6 +67,7 @@ export const pipelineFlow = {
   stepFail(episodeId: string, name: string, elapsedMs: number, error: string): void {
     const short = error.length > 55 ? error.slice(0, 55) + '…' : error;
     line('🔴', 'FAILED', name, `✗  ${(elapsedMs / 1000).toFixed(1)}s  —  ${short}`);
+    PipelineProgress.clear(episodeId);
     PipelineLogBus.emit(episodeId, 'error', `${name} failed after ${(elapsedMs / 1000).toFixed(1)}s — ${error}`);
   },
 
