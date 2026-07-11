@@ -27,7 +27,7 @@ export interface WhisperResult {
 }
 
 export async function transcribeWithWhisper(request: WhisperRequest): Promise<WhisperResult> {
-  const { audioPath, outputSrtPath, modelSize = 'base', language = 'en', onProgress } = request;
+  const { audioPath, outputSrtPath, modelSize = 'tiny', language = 'en', onProgress } = request;
 
   await mkdir(dirname(outputSrtPath), { recursive: true });
 
