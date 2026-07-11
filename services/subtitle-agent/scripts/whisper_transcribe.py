@@ -1,11 +1,19 @@
 #!/usr/bin/env python3
 """
 StoryForge AI — Whisper Transcription Script
-Usage: python whisper_transcribe.py <audio_path> <output_srt_path> [model_size]
+Usage: python whisper_transcribe.py <audio_path> <output_srt_path> [model_size] [language]
+
 Requires: pip install faster-whisper
 
-Model sizes: tiny.en, base.en, small.en, medium.en
-First run downloads the model (~145MB for base.en)
+Model sizes:
+  English-only (faster): tiny.en, base.en, small.en, medium.en
+  Multilingual:          tiny,    base,    small,    medium
+
+IMPORTANT: .en suffix models CANNOT transcribe non-English languages.
+For Hindi (hi), Telugu (te), or any non-English language, use the
+multilingual variant (tiny / base / small) — WITHOUT the .en suffix.
+
+First run downloads the model (~145MB for base)
 """
 import sys
 import os
@@ -20,7 +28,8 @@ def format_srt_time(seconds: float) -> str:
     return f"{hours:02d}:{minutes:02d}:{secs:02d},{millis:03d}"
 
 
-def transcribe(audio_path: str, output_srt: str, model_size: str = "base.en") -> None:
+def transcribe(audio_path: str, output_srt: str, model_size: str = "base", language: str = "en") -> None:
+    """Transcribe audio using faster-whisper and write an SRT subtitle file."""
     try:
         from faster_whisper import WhisperModel
     except ImportError:
@@ -36,10 +45,10 @@ def transcribe(audio_path: str, output_srt: str, model_size: str = "base.en") ->
     print(f"Loading Whisper model: {model_size} (downloads on first run)...", flush=True)
     model = WhisperModel(model_size, device="cpu", compute_type="int8")
 
-    print(f"Transcribing: {audio_path}", flush=True)
+    print(f"Transcribing: {audio_path} (language={language})", flush=True)
     segments, info = model.transcribe(
         audio_path,
-        language="en",
+        language=language,
         word_timestamps=False,
         vad_filter=True,
         vad_parameters={"min_silence_duration_ms": 300},
@@ -65,12 +74,13 @@ def transcribe(audio_path: str, output_srt: str, model_size: str = "base.en") ->
 
 if __name__ == "__main__":
     if len(sys.argv) < 3:
-        print("Usage: python whisper_transcribe.py <audio_path> <output_srt> [model_size]",
+        print("Usage: python whisper_transcribe.py <audio_path> <output_srt> [model_size] [language]",
               file=sys.stderr)
         sys.exit(1)
 
     audio_path = sys.argv[1]
     output_srt = sys.argv[2]
-    model_size = sys.argv[3] if len(sys.argv) > 3 else "base.en"
+    model_size = sys.argv[3] if len(sys.argv) > 3 else "base"
+    language   = sys.argv[4] if len(sys.argv) > 4 else "en"
 
-    transcribe(audio_path, output_srt, model_size)
+    transcribe(audio_path, output_srt, model_size, language)

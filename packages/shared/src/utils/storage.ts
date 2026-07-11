@@ -111,6 +111,25 @@ export async function releaseLocalFile(localPath: string, wasDownloaded: boolean
   await unlink(localPath).catch(() => {});
 }
 
+/**
+ * Deletes a batch of objects from Supabase Storage by key. No-op if remote
+ * storage isn't configured or the list is empty. Supabase's `remove()`
+ * silently succeeds for keys that don't exist, which is what makes this safe
+ * to call repeatedly (e.g. retention cleanup retried after a partial failure).
+ */
+export async function deleteStorageObjects(keys: string[]): Promise<void> {
+  if (!isRemoteStorageEnabled() || keys.length === 0) return;
+
+  const env = getEnv();
+  const { error } = await getClient().storage.from(env.SUPABASE_BUCKET!).remove(keys);
+
+  if (error) {
+    throw new StorageError(`Supabase Storage delete failed: ${error.message}`);
+  }
+
+  logger.info('Deleted objects from remote storage', { count: keys.length });
+}
+
 /** Confirms the configured bucket is actually reachable — used by the health check. */
 export async function checkStorageHealth(): Promise<{ ok: boolean; message?: string }> {
   if (!isRemoteStorageEnabled()) {

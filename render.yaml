@@ -1,0 +1,32 @@
+services:
+  # ─── Frontend (Static Site) ────────────────────────────────────────────────
+  - type: web
+    name: story-forge-1-frontend
+    runtime: static
+    rootDir: apps/web
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    # Fallback to index.html for all routes so React Router (BrowserRouter) works.
+    # Without this, direct navigation to /scheduler, /stories/:id etc. returns 404.
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    headers:
+      - path: /assets/*
+        name: Cache-Control
+        value: public, max-age=31536000, immutable
+      - path: /index.html
+        name: Cache-Control
+        value: no-cache, no-store, must-revalidate
+
+  # ─── Backend API (Web Service) ─────────────────────────────────────────────
+  # Uncomment and fill in when you want Render to manage the API too.
+  # - type: web
+  #   name: story-forge-1-api
+  #   runtime: docker
+  #   dockerfilePath: ./Dockerfile
+  #   dockerContext: .
+  #   envVars:
+  #     - key: NODE_ENV
+  #       value: production

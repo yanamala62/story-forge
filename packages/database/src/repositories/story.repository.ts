@@ -129,6 +129,14 @@ export class StoryRepository extends BaseRepository {
     });
   }
 
+  /** Mirrors incrementEpisodeCount — used when a counted episode is hard-deleted (retention). */
+  async decrementEpisodeCount(id: string, by = 1): Promise<Story> {
+    return this.db.story.update({
+      where: { id },
+      data: { episodeCount: { decrement: by } },
+    });
+  }
+
   async softDelete(id: string): Promise<void> {
     await this.db.story.update({
       where: { id },

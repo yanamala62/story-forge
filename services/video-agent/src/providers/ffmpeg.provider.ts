@@ -17,6 +17,7 @@ export interface ComposeVideoInput {
   fps?: number;
   crf?: number;
   codec?: string;
+  onProgress?: (done: number, total: number, phase: 'clip' | 'compose') => void;
 }
 
 export interface ComposeVideoResult {
@@ -138,6 +139,7 @@ export async function composeVideo(
     fps = 30,
     crf = 23,
     codec = 'libx264',
+    onProgress,
   } = input;
 
   if (!imagePaths.length) throw new Error('No images provided for video composition');
@@ -168,7 +170,10 @@ export async function composeVideo(
     });
     clipPaths.push(clipPath);
     logger.debug('Scene clip rendered', { scene: i + 1, clipPath });
+    onProgress?.(i + 1, sceneCount + 1, 'clip');
   }
+
+  onProgress?.(sceneCount, sceneCount + 1, 'compose');
 
   // ── Pass 2: concat clips + mux audio + burn subtitles ──────────────────────
   // Concat list referencing the rendered clips (all identical params → safe).

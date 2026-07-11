@@ -191,4 +191,29 @@ export class EpisodeRepository extends BaseRepository {
     });
     return result.count;
   }
+
+  /**
+   * Full, unpaginated episode list for a story ordered newest-first by creation
+   * time — used by EpisodeRetentionService to rank episodes for retention.
+   * Deliberately not the paginated findByStoryId (capped at 100 per page).
+   */
+  async findAllByStoryId(storyId: string): Promise<Episode[]> {
+    return this.db.episode.findMany({
+      where: { storyId },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  /**
+   * Distinct storyIds that currently have more than `limit` episodes —
+   * candidates for a retention pass (EpisodeRetentionService).
+   */
+  async findStoriesExceedingRetention(limit = 3): Promise<string[]> {
+    const groups = await this.db.episode.groupBy({
+      by: ['storyId'],
+      _count: { _all: true },
+      having: { storyId: { _count: { gt: limit } } },
+    });
+    return groups.map((g) => g.storyId);
+  }
 }

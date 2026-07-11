@@ -1,6 +1,7 @@
 import { createLogger, NotFoundError, ensureLocalFile, releaseLocalFile } from '@storyforge/shared';
 import { EpisodeRepository, AudioRepository, SubtitleRepository, StoryRepository } from '@storyforge/database';
 import { SubtitleAgentService } from '@storyforge/subtitle-agent';
+import { PipelineLogBus } from './pipeline-log-bus.js';
 
 const logger = createLogger('subtitle-pipeline');
 
@@ -42,6 +43,9 @@ export const SubtitlePipelineService = {
         episodeId,
         audioPath: audioFile.localPath,
         language,
+        onProgress: (level, message) => {
+          PipelineLogBus.emit(episodeId, level, `[whisper] ${message}`);
+        },
       });
     } finally {
       await releaseLocalFile(audioFile.localPath, audioDownloaded);

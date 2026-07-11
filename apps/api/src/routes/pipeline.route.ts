@@ -1,6 +1,7 @@
 import { Router, type Request, type Response } from 'express';
 import { PipelineOrchestratorService } from '../services/pipeline-orchestrator.service.js';
 import { PipelineLogBus } from '../services/pipeline-log-bus.js';
+import { PipelineProgress } from '../services/pipeline-progress.js';
 import type { ApiResponse } from '@storyforge/shared';
 
 const router = Router();
@@ -197,7 +198,11 @@ router.get('/episodes/:id/pipeline/status', async (req: Request, res: Response) 
   // enum to change (which happens after the step completes).
   if (isRunning) {
     const firstPending = status.steps.find((s) => s.status === 'pending');
-    if (firstPending) firstPending.status = 'running';
+    if (firstPending) {
+      firstPending.status = 'running';
+      const progress = PipelineProgress.get(episodeId);
+      if (progress) firstPending.progress = progress;
+    }
   }
 
   res.json({

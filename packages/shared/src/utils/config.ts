@@ -30,10 +30,12 @@ const environmentSchema = z.object({
   OPENROUTER_TIMEOUT_MS: z.coerce.number().int().positive().default(120_000),
   OPENROUTER_MAX_RETRIES: z.coerce.number().int().positive().default(3),
 
-  // tiny.en over base.en — meaningfully lower memory footprint for the
-  // faster-whisper subprocess, which matters on memory-constrained hosts
-  // (e.g. Render's free 512MB tier), at some cost to transcription accuracy.
-  WHISPER_MODEL: z.string().default('tiny.en'),
+  // Use the multilingual 'tiny' model (not 'tiny.en') as the default so that
+  // non-English stories (Hindi, Telugu, etc.) can be transcribed. The .en suffix
+  // models are English-only and cannot process any other language — they will time
+  // out or produce empty output when given non-English audio.
+  // Memory footprint is similar; multilingual 'tiny' is ~75MB vs 'tiny.en' ~75MB.
+  WHISPER_MODEL: z.string().default('tiny'),
   WHISPER_LANGUAGE: z.string().default('en'),
   WHISPER_DEVICE: z.enum(['cpu', 'cuda']).default('cpu'),
 

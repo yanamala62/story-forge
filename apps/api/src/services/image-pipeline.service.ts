@@ -9,6 +9,8 @@ import {
 } from '@storyforge/database';
 import { PromptAgentService } from '@storyforge/prompt-agent';
 import { ImageAgentService } from '@storyforge/image-agent';
+import { PipelineLogBus } from './pipeline-log-bus.js';
+import { PipelineProgress } from './pipeline-progress.js';
 
 const logger = createLogger('image-pipeline');
 
@@ -111,6 +113,15 @@ export const ImagePipelineService = {
       imageInputs,
       (done, total) => {
         logger.info(`Image progress: ${done}/${total}`, { episodeId });
+        PipelineProgress.set(episodeId, done, total);
+        PipelineLogBus.emit(episodeId, 'info', `Image ${done}/${total} generated`);
+      },
+      (sceneNumber, attempt, maxAttempts, error) => {
+        PipelineLogBus.emit(
+          episodeId,
+          'warn',
+          `Scene ${sceneNumber}: retrying (${attempt}/${maxAttempts}) — ${error}`,
+        );
       },
     );
 

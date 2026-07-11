@@ -100,6 +100,7 @@ export interface PipelineStep {
   name: string; // 'M1: Story + Scenes', etc.
   status: 'completed' | 'running' | 'failed' | 'pending';
   error?: string | null;
+  progress?: { done: number; total: number };
 }
 
 export interface PipelineStatus {
