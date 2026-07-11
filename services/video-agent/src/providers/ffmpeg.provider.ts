@@ -69,7 +69,7 @@ export async function generateThumbnail(
   await mkdir(dirname(thumbnailPath), { recursive: true });
   await execFileAsync(
     ffmpegPath,
-    ['-y', '-ss', '2', '-i', videoPath, '-vframes', '1', '-q:v', '2', thumbnailPath],
+    ['-y', '-hide_banner', '-loglevel', 'error', '-ss', '2', '-i', videoPath, '-vframes', '1', '-q:v', '2', thumbnailPath],
     { timeout: 30_000 },
   );
   return thumbnailPath;
@@ -108,6 +108,8 @@ async function renderSceneClip(
 
   const args = [
     '-y',
+    '-hide_banner',
+    '-loglevel', 'error',
     '-loop', '1',
     '-i', imagePath,
     '-t', durationSec.toFixed(3),
@@ -121,7 +123,10 @@ async function renderSceneClip(
     clipOutPath,
   ];
 
-  await execFileAsync(ffmpegPath, args, { timeout: 300_000 });
+  // maxBuffer is a defensive ceiling on top of -loglevel error (which already
+  // cuts stderr volume to near-zero in the success case) — a real ffmpeg error
+  // dump should never approach even a fraction of this.
+  await execFileAsync(ffmpegPath, args, { timeout: 300_000, maxBuffer: 20 * 1024 * 1024 });
 }
 
 export async function composeVideo(
@@ -195,6 +200,8 @@ export async function composeVideo(
 
   const args = [
     '-y',
+    '-hide_banner',
+    '-loglevel', 'error',
     '-f', 'concat',
     '-safe', '0',
     '-i', concatListPath,
@@ -216,9 +223,15 @@ export async function composeVideo(
 
   logger.info('Stitching clips + audio + subtitles', { outputPath });
 
+  // Root cause of the recurring "stderr maxBuffer length exceeded" production
+  // failure: ffmpeg's default verbosity writes continuous per-frame stats to
+  // stderr, which crosses Node's default ~1MB execFile buffer partway through
+  // a full-length composite. -loglevel error eliminates that noise at the
+  // source; maxBuffer is raised as a defensive ceiling on top of that.
   const { stderr } = await execFileAsync(ffmpegPath, args, {
     timeout: 600_000,
     cwd: outputDir,
+    maxBuffer: 20 * 1024 * 1024,
   });
 
   if (stderr) {
