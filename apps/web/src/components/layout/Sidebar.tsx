@@ -1,10 +1,11 @@
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, BookOpen, Clock, Zap } from 'lucide-react';
+import { LayoutDashboard, BookOpen, Clock, Zap, Scissors } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const links = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
   { to: '/stories', label: 'Stories', icon: BookOpen },
+  { to: '/clip-forge', label: 'Clip Forge', icon: Scissors },
   { to: '/scheduler', label: 'Pipeline', icon: Clock },
 ];
 
