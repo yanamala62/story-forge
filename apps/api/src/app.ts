@@ -23,6 +23,7 @@ import { pipelineRouter } from './routes/pipeline.route.js';
 import { schedulerRouter } from './routes/scheduler.route.js';
 import { analyticsRouter } from './routes/analytics.route.js';
 import { settingsRouter } from './routes/settings.route.js';
+import { clipForgeRouter } from './routes/clip-forge.route.js';
 
 export function createApp(): Application {
   const app = express();
@@ -86,6 +87,7 @@ export function createApp(): Application {
   app.use('/api', schedulerRouter);
   app.use('/api', analyticsRouter);
   app.use('/api', settingsRouter);
+  app.use('/api', clipForgeRouter);
 
   // 404 handler
   app.use(notFoundMiddleware);

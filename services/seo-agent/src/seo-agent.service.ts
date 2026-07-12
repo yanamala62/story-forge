@@ -2,6 +2,8 @@ import { createLogger, getEnv, AgentError, ExternalServiceError } from '@storyfo
 import { OpenRouterClient } from '@storyforge/story-agent';
 import type { ILLMClient } from '@storyforge/story-agent';
 import { buildSeoPrompt, type SeoPromptContext } from './prompts/seo.prompts.js';
+import { buildClipForgeTitlePrompt, type ClipForgeTitlePromptContext } from './prompts/clip-forge-title.prompts.js';
+import { buildFallbackClipForgeTitle, validateClipForgeTitle } from './clip-forge-title.utils.js';
 
 const logger = createLogger('seo-agent');
 
@@ -34,6 +36,19 @@ interface RawSeoResponse {
   hashtags?: unknown;
   category?: unknown;
   thumbnailText?: unknown;
+}
+
+export interface GenerateClipForgeTitleInput {
+  originalVideoTitle: string;
+  partNumber: number;
+  totalParts: number;
+  startTime: number;
+  endTime: number;
+}
+
+export interface GenerateClipForgeTitleResult {
+  title: string;
+  usedFallback: boolean;
 }
 
 export class SeoAgentService {
@@ -149,5 +164,68 @@ export class SeoAgentService {
     }
 
     return { title, description, tags, hashtags, category, thumbnailText };
+  }
+
+  /**
+   * Generates an SEO-friendly title for a single Clip Forge Short. Reuses the
+   * SAME OpenRouterClient / model as generateSeo() above — no duplicate LLM
+   * client. NEVER throws: any failure (LLM error, timeout, invalid JSON,
+   * failed validation) falls back to a deterministic, always-valid title, per
+   * the product spec's "DO NOT fail the complete pipeline" rule for SEO
+   * generation. The Part number is appended deterministically by this method
+   * (never left to the model), so it is always present and always correct.
+   */
+  async generateClipForgeTitle(input: GenerateClipForgeTitleInput): Promise<GenerateClipForgeTitleResult> {
+    const fallback = buildFallbackClipForgeTitle(input.originalVideoTitle, input.partNumber, input.totalParts);
+
+    try {
+      const ctx: ClipForgeTitlePromptContext = {
+        originalVideoTitle: input.originalVideoTitle,
+        partNumber: input.partNumber,
+        totalParts: input.totalParts,
+        startTime: input.startTime,
+        endTime: input.endTime,
+      };
+
+      const raw = await this.llm.chatJSON<{ phrase?: unknown }>(
+        this.model,
+        [
+          {
+            role: 'system',
+            content: 'You are a YouTube Shorts SEO specialist. Always return valid JSON only, no markdown or explanation.',
+          },
+          { role: 'user', content: buildClipForgeTitlePrompt(ctx) },
+        ],
+        { temperature: 0.6, maxTokens: 200, jsonMode: true },
+      );
+
+      const phrase = typeof raw.phrase === 'string' ? raw.phrase.trim() : '';
+      if (!phrase) {
+        logger.warn('Clip Forge title generation returned an empty phrase — using fallback', {
+          partNumber: input.partNumber,
+        });
+        return { title: fallback, usedFallback: true };
+      }
+
+      const partLabel = fallback.split(' | ')[1]?.split(' #Shorts')[0] ?? `Part ${String(input.partNumber).padStart(3, '0')}`;
+      const candidate = `${phrase} | ${partLabel} #Shorts`;
+
+      const validation = validateClipForgeTitle(candidate, input.partNumber, input.totalParts);
+      if (!validation.valid) {
+        logger.warn('Generated Clip Forge title failed validation — using fallback', {
+          partNumber: input.partNumber,
+          reasons: validation.reasons,
+        });
+        return { title: fallback, usedFallback: true };
+      }
+
+      return { title: candidate, usedFallback: false };
+    } catch (error) {
+      logger.warn('Clip Forge title generation failed — using fallback', {
+        partNumber: input.partNumber,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return { title: fallback, usedFallback: true };
+    }
   }
 }

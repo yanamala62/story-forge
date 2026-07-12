@@ -8,6 +8,8 @@ import { StoriesPage } from '@/pages/StoriesPage';
 import { StoryDetailPage } from '@/pages/StoryDetailPage';
 import { EpisodeDetailPage } from '@/pages/EpisodeDetailPage';
 import { SchedulerPage } from '@/pages/SchedulerPage';
+import { ClipForgePage } from '@/pages/ClipForgePage';
+import { ClipForgeDetailPage } from '@/pages/ClipForgeDetailPage';
 
 export default function App() {
   return (
@@ -20,6 +22,8 @@ export default function App() {
             <Route path="stories/:storyId" element={<StoryDetailPage />} />
             <Route path="stories/:storyId/episodes/:episodeId" element={<EpisodeDetailPage />} />
             <Route path="scheduler" element={<SchedulerPage />} />
+            <Route path="clip-forge" element={<ClipForgePage />} />
+            <Route path="clip-forge/:projectId" element={<ClipForgeDetailPage />} />
           </Route>
         </Routes>
       </BrowserRouter>

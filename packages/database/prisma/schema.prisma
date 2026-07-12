@@ -29,8 +29,9 @@ model User {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  stories  Story[]
-  settings Setting[]
+  stories           Story[]
+  settings          Setting[]
+  clipForgeProjects ClipForgeProject[]
 
   @@index([email])
   @@index([isActive])
@@ -48,18 +49,18 @@ enum UserRole {
 // =============================================================================
 
 model Story {
-  id             String        @id @default(uuid())
-  userId         String        @map("user_id")
+  id             String          @id @default(uuid())
+  userId         String          @map("user_id")
   title          String
   genre          StoryGenre
-  style          ImageStyle    @default(ANIME)
+  style          ImageStyle      @default(ANIME)
   language       ContentLanguage @default(EN) @map("language")
-  synopsis       String        @db.Text
-  targetAudience String        @default("13-35") @map("target_audience")
-  isActive       Boolean       @default(true) @map("is_active")
-  episodeCount   Int           @default(0) @map("episode_count")
-  createdAt      DateTime      @default(now()) @map("created_at")
-  updatedAt      DateTime      @updatedAt @map("updated_at")
+  synopsis       String          @db.Text
+  targetAudience String          @default("13-35") @map("target_audience")
+  isActive       Boolean         @default(true) @map("is_active")
+  episodeCount   Int             @default(0) @map("episode_count")
+  createdAt      DateTime        @default(now()) @map("created_at")
+  updatedAt      DateTime        @updatedAt @map("updated_at")
 
   user       User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   episodes   Episode[]
@@ -128,7 +129,7 @@ model Episode {
   cliffhanger     String        @db.Text
   duration        Int           @default(40)
   status          EpisodeStatus @default(PENDING)
-  processingError String?       @db.Text @map("processing_error")
+  processingError String?       @map("processing_error") @db.Text
   createdAt       DateTime      @default(now()) @map("created_at")
   updatedAt       DateTime      @updatedAt @map("updated_at")
 
@@ -196,7 +197,7 @@ model Character {
   storyId           String   @map("story_id")
   name              String
   description       String   @db.Text
-  visualDescription String   @db.Text @map("visual_description")
+  visualDescription String   @map("visual_description") @db.Text
   personality       String   @db.Text
   role              String
   appearances       Int      @default(0)
@@ -216,7 +217,7 @@ model Location {
   storyId           String   @map("story_id")
   name              String
   description       String   @db.Text
-  visualDescription String   @db.Text @map("visual_description")
+  visualDescription String   @map("visual_description") @db.Text
   appearances       Int      @default(0)
   createdAt         DateTime @default(now()) @map("created_at")
   updatedAt         DateTime @updatedAt @map("updated_at")
@@ -237,8 +238,8 @@ model Prompt {
   episodeId      String     @map("episode_id")
   sceneId        String?    @unique @map("scene_id")
   type           PromptType @default(SCENE)
-  positivePrompt String     @db.Text @map("positive_prompt")
-  negativePrompt String     @default("") @db.Text @map("negative_prompt")
+  positivePrompt String     @map("positive_prompt") @db.Text
+  negativePrompt String     @default("") @map("negative_prompt") @db.Text
   style          String
   characters     Json       @default("[]")
   location       String?
@@ -362,24 +363,24 @@ enum SubtitleStatus {
 // =============================================================================
 
 model Video {
-  id            String      @id @default(uuid())
-  episodeId     String      @unique @map("episode_id")
-  filename      String
-  localPath     String      @map("local_path")
-  s3Key         String?     @map("s3_key")
-  s3Url         String?     @map("s3_url")
-  duration      Float
-  width         Int         @default(1080)
-  height        Int         @default(1920)
-  fps           Int         @default(30)
-  codec         String      @default("h264")
-  fileSize      BigInt      @map("file_size")
-  thumbnailPath String?     @map("thumbnail_path")
-  thumbnailS3Key String?    @map("thumbnail_s3_key")
-  thumbnailS3Url String?    @map("thumbnail_s3_url")
-  status        VideoStatus @default(PENDING)
-  createdAt     DateTime    @default(now()) @map("created_at")
-  updatedAt     DateTime    @updatedAt @map("updated_at")
+  id             String      @id @default(uuid())
+  episodeId      String      @unique @map("episode_id")
+  filename       String
+  localPath      String      @map("local_path")
+  s3Key          String?     @map("s3_key")
+  s3Url          String?     @map("s3_url")
+  duration       Float
+  width          Int         @default(1080)
+  height         Int         @default(1920)
+  fps            Int         @default(30)
+  codec          String      @default("h264")
+  fileSize       BigInt      @map("file_size")
+  thumbnailPath  String?     @map("thumbnail_path")
+  thumbnailS3Key String?     @map("thumbnail_s3_key")
+  thumbnailS3Url String?     @map("thumbnail_s3_url")
+  status         VideoStatus @default(PENDING)
+  createdAt      DateTime    @default(now()) @map("created_at")
+  updatedAt      DateTime    @updatedAt @map("updated_at")
 
   episode     Episode      @relation(fields: [episodeId], references: [id], onDelete: Cascade)
   seoMetadata SeoMetadata?
@@ -500,3 +501,138 @@ model Setting {
   @@map("settings")
 }
 
+// =============================================================================
+// CLIP FORGE — continuous YouTube-Shorts pipeline
+// =============================================================================
+
+model ClipForgeProject {
+  id     String @id @default(uuid())
+  userId String @map("user_id")
+
+  // Source
+  sourceUrl         String   @map("source_url")
+  sourceVideoId     String   @map("source_video_id")
+  sourceTitle       String   @map("source_title") @db.Text
+  sourceDuration    Float?   @map("source_duration")
+  sourceWidth       Int?     @map("source_width")
+  sourceHeight      Int?     @map("source_height")
+  sourceFps         Int?     @map("source_fps")
+  sourceHasAudio    Boolean? @map("source_has_audio")
+  sourceStoragePath String?  @map("source_storage_path")
+  sourceFingerprint String?  @map("source_fingerprint")
+
+  // Split plan
+  targetShortDuration Float @default(60) @map("target_short_duration")
+  totalParts          Int   @default(0) @map("total_parts")
+
+  // Pipeline state
+  status                   ClipForgeProjectStatus @default(CREATED)
+  continuityValidated      Boolean                @default(false) @map("continuity_validated")
+  lastSuccessfulPartNumber Int?                   @map("last_successful_part_number")
+  failureReason            String?                @map("failure_reason") @db.Text
+
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  startedAt   DateTime? @map("started_at")
+  completedAt DateTime? @map("completed_at")
+  failedAt    DateTime? @map("failed_at")
+
+  user                  User                            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parts                 ClipForgePart[]
+  continuityValidations ClipForgeContinuityValidation[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([sourceVideoId])
+  @@map("clip_forge_projects")
+}
+
+enum ClipForgeProjectStatus {
+  CREATED
+  SOURCE_VALIDATING
+  SOURCE_READY
+  SPLIT_PLANNING
+  CONTINUITY_VALIDATING
+  PROCESSING
+  UPLOADING
+  WAITING_FOR_YOUTUBE_QUOTA
+  PARTIALLY_COMPLETED
+  COMPLETED
+  FAILED
+  CONTINUITY_VALIDATION_FAILED
+}
+
+model ClipForgePart {
+  id        String @id @default(uuid())
+  projectId String @map("project_id")
+
+  partNumber Int    @map("part_number")
+  partLabel  String @map("part_label")
+  totalParts Int    @map("total_parts")
+
+  startTime Float @map("start_time")
+  endTime   Float @map("end_time")
+  duration  Float
+
+  seoTitle    String? @map("seo_title") @db.Text
+  description String? @db.Text
+
+  status ClipForgePartStatus @default(PENDING)
+
+  renderedStoragePath String? @map("rendered_storage_path")
+
+  youtubeVideoId  String? @map("youtube_video_id")
+  youtubeVideoUrl String? @map("youtube_video_url")
+
+  uploadAttempts  Int     @default(0) @map("upload_attempts")
+  lastUploadError String? @map("last_upload_error") @db.Text
+
+  renderStartedAt   DateTime? @map("render_started_at")
+  renderCompletedAt DateTime? @map("render_completed_at")
+  uploadedAt        DateTime? @map("uploaded_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  project ClipForgeProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, partNumber])
+  @@index([projectId])
+  @@index([status])
+  @@map("clip_forge_parts")
+}
+
+enum ClipForgePartStatus {
+  PENDING
+  RENDERING
+  RENDERED
+  STORED
+  SEO_TITLE_GENERATING
+  SEO_TITLE_READY
+  UPLOAD_PENDING
+  UPLOADING
+  UPLOADED
+  FAILED
+  COMPLETED
+}
+
+model ClipForgeContinuityValidation {
+  id        String @id @default(uuid())
+  projectId String @map("project_id")
+
+  valid           Boolean @default(false)
+  sourceDuration  Float   @map("source_duration")
+  coveredDuration Float   @map("covered_duration")
+
+  missingRangesJson     Json @default("[]") @map("missing_ranges_json")
+  overlapRangesJson     Json @default("[]") @map("overlap_ranges_json")
+  duplicateRangesJson   Json @default("[]") @map("duplicate_ranges_json")
+  validationDetailsJson Json @default("{}") @map("validation_details_json")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  project ClipForgeProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@map("clip_forge_continuity_validations")
+}
