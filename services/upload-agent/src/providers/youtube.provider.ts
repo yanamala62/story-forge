@@ -5,6 +5,13 @@ import { basename } from 'path';
 
 const logger = createLogger('youtube-provider');
 
+// "Out-of-band" redirect target — Google shows the auth code directly on its
+// own consent-screen page instead of redirecting to a server we control. No
+// redirect_uri needs to be registered in Google Cloud Console for this to
+// work with the existing Desktop-type OAuth client (same as scripts/youtube-auth.mjs).
+const OOB_REDIRECT_URI = 'urn:ietf:wg:oauth:2.0:oob';
+
+
 export interface YouTubeUploadInput {
   videoPath: string;
   title: string;
@@ -22,26 +29,64 @@ export interface YouTubeUploadResult {
   title: string;
 }
 
+/**
+ * getRefreshToken is called fresh on every auth-client build (not cached at
+ * construction) so a token saved by the "Reconnect YouTube" flow takes effect
+ * on the very next request — no restart required.
+ */
 export class YouTubeProvider {
   private readonly clientId: string;
   private readonly clientSecret: string;
-  private readonly refreshToken: string;
+  private readonly getRefreshToken: () => Promise<string | null>;
 
-  constructor(config: { clientId: string; clientSecret: string; refreshToken: string }) {
+  constructor(config: {
+    clientId: string;
+    clientSecret: string;
+    getRefreshToken: () => Promise<string | null>;
+  }) {
     this.clientId = config.clientId;
     this.clientSecret = config.clientSecret;
-    this.refreshToken = config.refreshToken;
+    this.getRefreshToken = config.getRefreshToken;
   }
 
-  private getOAuth2Client() {
+  private async getOAuth2Client() {
+    const refreshToken = await this.getRefreshToken();
+    if (!refreshToken) {
+      throw new Error('No YouTube refresh token available — reconnect YouTube in Settings');
+    }
     const auth = new google.auth.OAuth2(this.clientId, this.clientSecret);
-    auth.setCredentials({ refresh_token: this.refreshToken });
+    auth.setCredentials({ refresh_token: refreshToken });
     return auth;
   }
 
+  /** Builds the Google consent-screen URL for the "Reconnect YouTube" flow. */
+  buildAuthUrl(): string {
+    const auth = new google.auth.OAuth2(this.clientId, this.clientSecret, OOB_REDIRECT_URI);
+    return auth.generateAuthUrl({
+      access_type: 'offline',
+      prompt: 'consent', // forces a fresh refresh_token every time, even on re-auth
+      scope: ['https://www.googleapis.com/auth/youtube.upload', 'https://www.googleapis.com/auth/youtube'],
+    });
+  }
+
+  /** Exchanges the code the user pasted from Google's consent page for tokens and returns the refresh token. */
+  async exchangeCode(code: string): Promise<string> {
+    const auth = new google.auth.OAuth2(this.clientId, this.clientSecret, OOB_REDIRECT_URI);
+    const { tokens } = await auth.getToken(code.trim());
+    if (!tokens.refresh_token) {
+      throw new Error(
+        'Google did not return a refresh token. Revoke access at ' +
+          'https://myaccount.google.com/permissions and try reconnecting again.',
+      );
+    }
+    return tokens.refresh_token;
+  }
+
+
   /** Confirms the refresh token can still mint an access token — no quota-heavy call. */
   async checkHealth(): Promise<void> {
-    await this.getOAuth2Client().getAccessToken();
+    const auth = await this.getOAuth2Client();
+    await auth.getAccessToken();
   }
 
   async upload(input: YouTubeUploadInput): Promise<YouTubeUploadResult> {
@@ -56,7 +101,7 @@ export class YouTubeProvider {
       madeForKids = false,
     } = input;
 
-    const auth = this.getOAuth2Client();
+    const auth = await this.getOAuth2Client();
     const youtube = google.youtube({ version: 'v3', auth });
 
     // Append #Shorts hashtag to make YouTube recognise it as a Short
@@ -111,7 +156,7 @@ export class YouTubeProvider {
   }
 
   async getVideoStatus(videoId: string): Promise<'uploaded' | 'processed' | 'failed'> {
-    const auth = this.getOAuth2Client();
+    const auth = await this.getOAuth2Client();
     const youtube = google.youtube({ version: 'v3', auth });
 
     const response = await youtube.videos.list({

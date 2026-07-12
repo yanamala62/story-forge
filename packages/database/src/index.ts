@@ -24,6 +24,7 @@ export { UploadRepository } from './repositories/upload.repository.js';
 export type { CreateUploadInput } from './repositories/upload.repository.js';
 export { AnalyticsRepository } from './repositories/analytics.repository.js';
 export type { CreateAnalyticsInput } from './repositories/analytics.repository.js';
+export { SettingRepository } from './repositories/setting.repository.js';
 
 // Re-export Prisma types for convenience
 export type {

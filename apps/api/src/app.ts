@@ -22,6 +22,7 @@ import { uploadRouter } from './routes/upload.route.js';
 import { pipelineRouter } from './routes/pipeline.route.js';
 import { schedulerRouter } from './routes/scheduler.route.js';
 import { analyticsRouter } from './routes/analytics.route.js';
+import { settingsRouter } from './routes/settings.route.js';
 
 export function createApp(): Application {
   const app = express();
@@ -84,6 +85,7 @@ export function createApp(): Application {
   app.use('/api', pipelineRouter);
   app.use('/api', schedulerRouter);
   app.use('/api', analyticsRouter);
+  app.use('/api', settingsRouter);
 
   // 404 handler
   app.use(notFoundMiddleware);
