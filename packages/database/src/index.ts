@@ -25,17 +25,6 @@ export type { CreateUploadInput } from './repositories/upload.repository.js';
 export { AnalyticsRepository } from './repositories/analytics.repository.js';
 export type { CreateAnalyticsInput } from './repositories/analytics.repository.js';
 export { SettingRepository } from './repositories/setting.repository.js';
-export {
-  ClipForgeProjectRepository,
-  ClipForgePartRepository,
-  ClipForgeContinuityValidationRepository,
-} from './repositories/clip-forge.repository.js';
-export type {
-  CreateClipForgeProjectInput,
-  UpdateClipForgeProjectSourceInput,
-  CreateClipForgePartInput,
-  CreateContinuityValidationInput,
-} from './repositories/clip-forge.repository.js';
 
 // Re-export Prisma types for convenience
 export type {
@@ -55,9 +44,6 @@ export type {
   Upload,
   Analytics,
   Setting,
-  ClipForgeProject,
-  ClipForgePart,
-  ClipForgeContinuityValidation,
 } from '@prisma/client';
 
 export {
@@ -74,6 +60,4 @@ export {
   Platform,
   UploadStatus,
   PromptType,
-  ClipForgeProjectStatus,
-  ClipForgePartStatus,
 } from '@prisma/client';

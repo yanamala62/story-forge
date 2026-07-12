@@ -15,8 +15,6 @@
   },
   "dependencies": {
     "@storyforge/analytics-agent": "*",
-    "@storyforge/clip-continuity-agent": "*",
-    "@storyforge/clip-forge-orchestrator": "*",
     "@storyforge/database": "*",
     "@storyforge/image-agent": "*",
     "@storyforge/narration-agent": "*",

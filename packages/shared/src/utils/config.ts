@@ -77,14 +77,6 @@ const environmentSchema = z.object({
   JWT_REFRESH_EXPIRES_IN: z.string().default('30d'),
 
   CORS_ORIGINS: z.string().default('http://localhost:5173'),
-
-  // Clip Forge — continuous YouTube-Shorts pipeline. Central config so the
-  // target duration / privacy are never hard-coded across the pipeline.
-  CLIP_FORGE_TARGET_DURATION_SECONDS: z.coerce.number().int().positive().default(60),
-  CLIP_FORGE_YOUTUBE_PRIVACY: z.enum(['public', 'private', 'unlisted']).default('private'),
-  CLIP_FORGE_WIDTH: z.coerce.number().int().positive().default(1080),
-  CLIP_FORGE_HEIGHT: z.coerce.number().int().positive().default(1920),
-  YTDLP_BINARY_PATH: z.string().default('yt-dlp'),
 });
 
 export type Environment = z.infer<typeof environmentSchema>;
