@@ -58,7 +58,10 @@ const environmentSchema = z.object({
   SUPABASE_SECRET_KEY: z.string().optional(),
   SUPABASE_BUCKET: z.string().optional(),
 
-  // YouTube Data API v3 (M7 upload)
+  // YouTube Data API v3 (M7 upload). YOUTUBE_REFRESH_TOKEN here is only the
+  // initial/fallback value — the "Reconnect YouTube" flow (settings.route.ts)
+  // persists fresh tokens to the `settings` table at runtime, which always
+  // takes priority so a reconnect doesn't require an env edit + redeploy.
   YOUTUBE_CLIENT_ID: z.string().optional(),
   YOUTUBE_CLIENT_SECRET: z.string().optional(),
   YOUTUBE_REFRESH_TOKEN: z.string().optional(),

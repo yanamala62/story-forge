@@ -1,8 +1,11 @@
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { BookOpen, Film, Clock, AlertCircle, Eye, ThumbsUp } from 'lucide-react';
+import { BookOpen, Film, Clock, AlertCircle, Eye, ThumbsUp, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { YouTubeReconnectDialog } from '@/components/YouTubeReconnectDialog';
 import { schedulerApi, storiesApi, healthApi, analyticsApi } from '@/lib/api';
 import { SYSTEM_USER_ID } from '@/lib/api';
 import { formatRelative } from '@/lib/utils';
@@ -43,10 +46,17 @@ export function DashboardPage() {
   const { data: health } = useQuery({
     queryKey: ['health'],
     queryFn: healthApi.check,
+    // Poll YouTube's health more eagerly than the rest — its refresh token
+    // can go bad between visits, and the Reconnect button needs to appear
+    // (or disappear, once fixed) without a manual page reload.
     refetchInterval: 30_000,
   });
 
+  const [reconnectOpen, setReconnectOpen] = useState(false);
+
   const scheduler = schedulerData?.scheduler;
+  const youtubeHealth = health?.services?.['youtube'];
+  const youtubeDown = youtubeHealth?.status === 'down';
 
   return (
     <div className="space-y-6">
@@ -136,6 +146,17 @@ export function DashboardPage() {
                       >
                         {svc.status}
                       </Badge>
+                      {name === 'youtube' && youtubeDown && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-6 gap-1 px-2 text-xs"
+                          onClick={() => setReconnectOpen(true)}
+                        >
+                          <RefreshCw className="h-3 w-3" />
+                          Reconnect
+                        </Button>
+                      )}
                     </div>
                   </div>
                 ))
@@ -143,6 +164,8 @@ export function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      <YouTubeReconnectDialog open={reconnectOpen} onOpenChange={setReconnectOpen} />
     </div>
   );
 }

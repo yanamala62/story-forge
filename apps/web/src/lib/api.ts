@@ -247,3 +247,22 @@ export const healthApi = {
       .then((r) => r.json())
       .then((body) => body.data as { status: string; services: HealthStatus['services'] }),
 };
+
+// ── Settings ──────────────────────────────────────────────────────────────
+
+export const settingsApi = {
+  /** Fetches the Google consent-screen URL — caller opens it (new tab), Google shows a code on-screen to paste back in. */
+  getYouTubeAuthUrl: () => request<{ url: string }>('/settings/youtube/auth-url'),
+
+  /** Exchanges the code the user pasted from Google's consent page and persists the new refresh token. */
+  exchangeYouTubeCode: (code: string) =>
+    request<{ reconnected: boolean }>('/settings/youtube/exchange-code', {
+      method: 'POST',
+      body: JSON.stringify({ code }),
+    }),
+
+  youtubeStatus: () =>
+    request<{ configured: boolean; ok: boolean; message?: string }>('/settings/youtube/status'),
+};
+
+
