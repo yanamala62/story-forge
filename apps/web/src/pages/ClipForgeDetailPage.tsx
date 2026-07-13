@@ -52,10 +52,11 @@ function deriveStages(status: string, uploadedCount: number): PipelineStep[] {
 
   const isFailedState =
     status === 'FAILED' || status === 'CONTINUITY_VALIDATION_FAILED' || status === 'PARTIALLY_COMPLETED';
+  const activeStatus: PipelineStep['status'] = isFailedState ? 'failed' : 'running';
 
   return STAGE_DEFS.map((s, i) => {
     if (i < activeIdx) return { ...s, status: 'completed' as const };
-    if (i === activeIdx) return { ...s, status: (isFailedState ? 'failed' : 'running') as const };
+    if (i === activeIdx) return { ...s, status: activeStatus };
     return { ...s, status: 'pending' as const };
   });
 }
