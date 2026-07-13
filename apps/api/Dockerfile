@@ -32,6 +32,9 @@ COPY services/story-agent/package.json ./services/story-agent/
 COPY services/subtitle-agent/package.json ./services/subtitle-agent/
 COPY services/upload-agent/package.json ./services/upload-agent/
 COPY services/video-agent/package.json ./services/video-agent/
+COPY services/video-source-agent/package.json ./services/video-source-agent/
+COPY services/clip-continuity-agent/package.json ./services/clip-continuity-agent/
+COPY services/clip-forge-orchestrator/package.json ./services/clip-forge-orchestrator/
 RUN npm install --ignore-scripts \
     --workspace=apps/api \
     --workspace=packages/shared \
@@ -44,7 +47,10 @@ RUN npm install --ignore-scripts \
     --workspace=services/story-agent \
     --workspace=services/subtitle-agent \
     --workspace=services/upload-agent \
-    --workspace=services/video-agent
+    --workspace=services/video-agent \
+    --workspace=services/video-source-agent \
+    --workspace=services/clip-continuity-agent \
+    --workspace=services/clip-forge-orchestrator
 
 # -----------------------------------------------
 # python-deps: independent lineage — edge-tts + faster-whisper in a venv.
@@ -133,6 +139,12 @@ COPY --from=builder --chown=storyforge:nodejs /app/services/upload-agent/dist ./
 COPY --from=builder --chown=storyforge:nodejs /app/services/upload-agent/package.json ./services/upload-agent/
 COPY --from=builder --chown=storyforge:nodejs /app/services/video-agent/dist ./services/video-agent/dist
 COPY --from=builder --chown=storyforge:nodejs /app/services/video-agent/package.json ./services/video-agent/
+COPY --from=builder --chown=storyforge:nodejs /app/services/video-source-agent/dist ./services/video-source-agent/dist
+COPY --from=builder --chown=storyforge:nodejs /app/services/video-source-agent/package.json ./services/video-source-agent/
+COPY --from=builder --chown=storyforge:nodejs /app/services/clip-continuity-agent/dist ./services/clip-continuity-agent/dist
+COPY --from=builder --chown=storyforge:nodejs /app/services/clip-continuity-agent/package.json ./services/clip-continuity-agent/
+COPY --from=builder --chown=storyforge:nodejs /app/services/clip-forge-orchestrator/dist ./services/clip-forge-orchestrator/dist
+COPY --from=builder --chown=storyforge:nodejs /app/services/clip-forge-orchestrator/package.json ./services/clip-forge-orchestrator/
 COPY --from=builder --chown=storyforge:nodejs /app/apps/api/dist ./apps/api/dist
 COPY --from=builder --chown=storyforge:nodejs /app/apps/api/package.json ./apps/api/
 
@@ -171,6 +183,13 @@ ENV HOME=/tmp/storyforge
 # falling back to the bundled ffmpeg-static/ffprobe-static npm packages.
 ENV FFMPEG_BINARY_PATH=/usr/bin/ffmpeg
 ENV FFPROBE_BINARY_PATH=/usr/bin/ffprobe
+
+# Same reasoning as FFMPEG/FFPROBE_BINARY_PATH above: yt-dlp-exec's bundled
+# binary is never downloaded here (its postinstall is skipped by
+# `npm install --ignore-scripts` in the deps stage), so video-source-agent
+# must be pointed at the pip-installed yt-dlp in the python venv instead of
+# falling back to its bare 'yt-dlp' sentinel default.
+ENV YTDLP_BINARY_PATH=/opt/venv/bin/yt-dlp
 
 USER storyforge
 
