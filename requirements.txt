@@ -2,6 +2,7 @@
 # These are invoked as child processes from Node.js — see:
 #   services/narration-agent/scripts/tts.py             (edge-tts)
 #   services/subtitle-agent/scripts/whisper_transcribe.py (faster-whisper)
+#   services/video-source-agent (yt-dlp, invoked as a CLI binary, not imported)
 #
 # Verified as the only two third-party Python imports in the repo
 # (grepped for `import` across every *.py file); versions pinned to what
@@ -12,3 +13,10 @@ edge-tts==7.2.8
 
 # CTranslate2-based Whisper transcription — used by subtitle-agent to generate .srt subtitles.
 faster-whisper==1.2.1
+
+# YouTube video downloader — used by video-source-agent (Clip Forge) to ingest
+# the source video. Installed here (not via yt-dlp-exec's bundled binary)
+# because the Docker build runs `npm install --ignore-scripts`, which skips
+# yt-dlp-exec's postinstall download — same reasoning as edge-tts/faster-whisper
+# living in this venv rather than as npm-bundled binaries.
+yt-dlp==2025.6.30
