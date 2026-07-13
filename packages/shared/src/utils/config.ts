@@ -85,6 +85,14 @@ const environmentSchema = z.object({
   CLIP_FORGE_WIDTH: z.coerce.number().int().positive().default(1080),
   CLIP_FORGE_HEIGHT: z.coerce.number().int().positive().default(1920),
   YTDLP_BINARY_PATH: z.string().default('yt-dlp'),
+  // Datacenter/cloud-host IPs (Render, AWS, GCP, etc.) are frequently blocked
+  // by YouTube's "Sign in to confirm you're not a bot" check regardless of
+  // yt-dlp version — a residential IP is not blocked. Pointing this at a
+  // cookies.txt exported from a real logged-in browser session (e.g. via a
+  // Render Secret File mounted at /etc/secrets/youtube-cookies.txt)
+  // authenticates the request and reliably bypasses the check. Optional —
+  // ingestion still attempts an unauthenticated request first.
+  YTDLP_COOKIES_PATH: z.string().optional(),
 });
 
 export type Environment = z.infer<typeof environmentSchema>;

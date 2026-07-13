@@ -1,4 +1,4 @@
-import { createLogger, getEnv, AgentError, persistFile } from '@storyforge/shared';
+import { createLogger, getEnv, AgentError, ExternalServiceError, persistFile } from '@storyforge/shared';
 import { createHash } from 'crypto';
 import { stat } from 'fs/promises';
 import { join } from 'path';
@@ -51,6 +51,7 @@ export class VideoSourceAgentService {
   private readonly storageBasePath: string;
   private readonly ffprobePath: string;
   private readonly ytdlpPath: string;
+  private readonly ytdlpCookiesPath: string | undefined;
 
   constructor() {
     const env = getEnv();
@@ -63,6 +64,7 @@ export class VideoSourceAgentService {
     // node_modules/yt-dlp-exec/bin — same override-vs-bundled-binary pattern
     // as FFMPEG_BINARY_PATH/FFPROBE_BINARY_PATH in video-agent.
     this.ytdlpPath = env.YTDLP_BINARY_PATH !== 'yt-dlp' ? env.YTDLP_BINARY_PATH : ytDlpConstants.YOUTUBE_DL_PATH;
+    this.ytdlpCookiesPath = env.YTDLP_COOKIES_PATH;
 
     logger.debug('Binary paths resolved', { ffprobe: this.ffprobePath, ytdlp: this.ytdlpPath });
   }
@@ -76,12 +78,12 @@ export class VideoSourceAgentService {
 
     try {
       // yt-dlp's own metadata is a hint only (title is reliable; duration is not).
-      const info = await getVideoInfo(this.ytdlpPath, youtubeUrl);
+      const info = await getVideoInfo(this.ytdlpPath, youtubeUrl, this.ytdlpCookiesPath);
 
       const outputDir = join(process.cwd(), this.storageBasePath, 'clip-forge', userId, projectId, 'source');
       const localPath = join(outputDir, 'original.mp4');
 
-      await downloadVideo(this.ytdlpPath, youtubeUrl, localPath);
+      await downloadVideo(this.ytdlpPath, youtubeUrl, localPath, this.ytdlpCookiesPath);
 
       // The local file is the source of truth for splitting — never trust
       // yt-dlp's self-reported duration for continuity math.
@@ -119,7 +121,7 @@ export class VideoSourceAgentService {
         s3Url: persisted.s3Url,
       };
     } catch (error) {
-      if (error instanceof AgentError) throw error;
+      if (error instanceof AgentError || error instanceof ExternalServiceError) throw error;
       throw new AgentError(
         'video-source-agent',
         `Failed to ingest source video: ${error instanceof Error ? error.message : String(error)}`,
