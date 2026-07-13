@@ -3,7 +3,7 @@ import { OpenRouterClient } from '@storyforge/story-agent';
 import type { ILLMClient } from '@storyforge/story-agent';
 import { buildSeoPrompt, type SeoPromptContext } from './prompts/seo.prompts.js';
 import { buildClipForgeTitlePrompt, type ClipForgeTitlePromptContext } from './prompts/clip-forge-title.prompts.js';
-import { buildFallbackClipForgeTitle, validateClipForgeTitle } from './clip-forge-title.utils.js';
+import { buildFallbackClipForgeTitle, validateClipForgeTitle, formatPartLabel } from './clip-forge-title.utils.js';
 
 const logger = createLogger('seo-agent');
 
@@ -207,7 +207,12 @@ export class SeoAgentService {
         return { title: fallback, usedFallback: true };
       }
 
-      const partLabel = fallback.split(' | ')[1]?.split(' #Shorts')[0] ?? `Part ${String(input.partNumber).padStart(3, '0')}`;
+      // NOTE: partLabel must be computed directly (not parsed back out of the
+      // fallback string) — the original video title frequently contains its
+      // own " | " separators (e.g. "Title | Artist | Album"), which broke a
+      // previous version of this code that tried to extract the label via
+      // fallback.split(' | ')[1].
+      const partLabel = formatPartLabel(input.partNumber, input.totalParts);
       const candidate = `${phrase} | ${partLabel} #Shorts`;
 
       const validation = validateClipForgeTitle(candidate, input.partNumber, input.totalParts);

@@ -19,4 +19,8 @@ faster-whisper==1.2.1
 # because the Docker build runs `npm install --ignore-scripts`, which skips
 # yt-dlp-exec's postinstall download — same reasoning as edge-tts/faster-whisper
 # living in this venv rather than as npm-bundled binaries.
-yt-dlp==2025.6.30
+#
+# Kept close to latest deliberately (unlike the pinned-and-stable edge-tts/
+# faster-whisper above) — YouTube's extraction/anti-bot logic changes often
+# enough that yt-dlp ships near-weekly fixes; an old pin goes stale fast.
+yt-dlp==2026.7.4
