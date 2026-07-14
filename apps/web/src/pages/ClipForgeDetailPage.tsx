@@ -172,11 +172,22 @@ export function ClipForgeDetailPage() {
   const isNotStarted = project.status === 'CREATED';
   const hasFailedParts = parts.some((p) => p.status === 'FAILED');
   const isPausable = isRunning;
+  // FAILED is resumable too: run() is fully idempotent, so re-running picks up
+  // exactly where it stopped — including a failure during source ingest, where
+  // zero parts exist yet (so hasFailedParts would be false and the Retry button
+  // alone would never appear). Without FAILED here, such a project had NO action
+  // button at all.
   const isResumable =
     !isRunning &&
-    ['SOURCE_READY', 'SPLIT_PLANNING', 'PROCESSING', 'UPLOADING', 'WAITING_FOR_YOUTUBE_QUOTA', 'PARTIALLY_COMPLETED'].includes(
-      project.status,
-    );
+    [
+      'SOURCE_READY',
+      'SPLIT_PLANNING',
+      'PROCESSING',
+      'UPLOADING',
+      'WAITING_FOR_YOUTUBE_QUOTA',
+      'PARTIALLY_COMPLETED',
+      'FAILED',
+    ].includes(project.status);
 
   return (
     <div className="space-y-5">
