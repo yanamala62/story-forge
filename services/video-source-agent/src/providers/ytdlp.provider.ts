@@ -1,6 +1,7 @@
 import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { mkdir } from 'fs/promises';
+import { existsSync } from 'fs';
 import { dirname } from 'path';
 import { createLogger, ExternalServiceError } from '@storyforge/shared';
 
@@ -46,7 +47,16 @@ function buildBotCheckMessage(rawMessage: string): string {
 }
 
 function buildCookieArgs(cookiesPath: string | undefined): string[] {
-  return cookiesPath ? ['--cookies', cookiesPath] : [];
+  if (!cookiesPath) return [];
+  // A configured-but-missing cookie file is a common Render Secret File
+  // misconfiguration (wrong mount path / filename). Warn loudly and proceed
+  // WITHOUT the flag rather than letting yt-dlp abort with an opaque
+  // "cookies file not found" error that hides the real setup problem.
+  if (!existsSync(cookiesPath)) {
+    logger.warn('YTDLP_COOKIES_PATH is set but the file does not exist — proceeding without cookies', { cookiesPath });
+    return [];
+  }
+  return ['--cookies', cookiesPath];
 }
 
 /**
