@@ -10,7 +10,37 @@
       "Bash(curl -s \"http://localhost:3000/api/stories?limit=5\")",
       "Bash(npm uninstall *)",
       "Bash(npm install *)",
-      "Bash(taskkill //PID 5204 //F)"
+      "Bash(taskkill //PID 5204 //F)",
+      "Bash(*)",
+      "Bash(npm *)",
+      "Bash(npm view *)",
+      "Bash(npx tsc *)",
+      "Bash(python3 -c ' *)",
+      "Bash(yt-dlp --version)",
+      "Bash(pip3 show *)",
+      "Bash(\"/d/project/StoryForge AI/node_modules/yt-dlp-exec/bin/yt-dlp.exe\" --version)",
+      "Read(//c/Users/lenovo/.claude/projects/d--project-StoryForge-AI/8c952bc8-938d-46eb-88d2-dc2219e493a7/subagents/workflows/wf_e35bb1bd-cd0/**)",
+      "Bash(cat /tmp/api-smoke.log 2>&1 | tail -60)",
+      "Bash(pip3 index *)",
+      "Bash(pip3 download *)",
+      "Bash(npm run *)",
+      "Bash('/d/project/StoryForge AI/node_modules/yt-dlp-exec/bin/yt-dlp.exe' --version)",
+      "Bash(ls \"/c/Users/lenovo/AppData/Local/Microsoft/WinGet/Packages/Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe/ffmpeg-8.1.2-full_build/bin/\" 2>&1)",
+      "Read(//c/Users/lenovo/AppData/Local/Microsoft/WinGet/Packages/Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe/ffmpeg-8.1.2-full_build/bin//**)",
+      "Bash(FFMPEG_BINARY_PATH=\"C:/Users/lenovo/AppData/Local/Microsoft/WinGet/Packages/Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe/ffmpeg-8.1.2-full_build/bin/ffmpeg.exe\" FFPROBE_BINARY_PATH=\"C:/Users/lenovo/AppData/Local/Microsoft/WinGet/Packages/Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe/ffmpeg-8.1.2-full_build/bin/ffprobe.exe\" node scratch-e2e-test.mjs)",
+      "Bash(python -m pip install --quiet --disable-pip-version-check yt-dlp)",
+      "Bash(python -m yt_dlp --version)",
+      "Bash(YTDLP_BINARY_PATH=\"C:/Users/lenovo/AppData/Roaming/Python/Python310/Scripts/yt-dlp.exe\" node scratch-sample-test.mjs)",
+      "Bash(where ffmpeg *)",
+      "Bash(where ffprobe *)",
+      "Bash(command -v ffprobe)",
+      "Bash(YTDLP_BINARY_PATH=C:/Users/lenovo/AppData/Roaming/Python/Python310/Scripts/yt-dlp.exe FFMPEG_BINARY_PATH=__TRACKED_VAR__/ffmpeg.exe FFPROBE_BINARY_PATH=__TRACKED_VAR__/ffprobe.exe node scratch-sample-test.mjs)",
+      "Bash(grep -viE '\\\\[openrouter-client\\\\] .*debug|Sending request to OpenRouter|OpenRouter usage|promptTokens|completionTokens|messageCount|jsonMode|fallbackAttempt|^\\\\{$|^\\\\}$|Deprecated Feature')",
+      "Bash(grep -viE '\\\\[openrouter-client\\\\].*debug|Sending request to OpenRouter|OpenRouter usage|promptTokens|completionTokens|messageCount|jsonMode|fallbackAttempt|^\\\\{$|^\\\\}$|Deprecated Feature|Retrying same model|Model request failed|Retrying after error')",
+      "Bash(grep -viE '\\\\[openrouter-client\\\\].*debug|Sending request to OpenRouter|OpenRouter usage|promptTokens|completionTokens|messageCount|jsonMode|fallbackAttempt|^\\\\{$|^\\\\}$|Deprecated Feature|Retrying same model|Model request failed|Retrying after error|Fallback model|Binary paths|ffprobe.exe|ytdlp|SeoAgentService init|provider.*openrouter|model.*qwen')"
+    ],
+    "additionalDirectories": [
+      "\\private\\tmp\\claude-501\\-Users-wwzz-Downloads-proxyclawd\\88833871-9d1c-410a-8425-a5a54e5377ef\\scratchpad"
     ]
   }
 }

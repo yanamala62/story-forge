@@ -22,6 +22,11 @@ tsconfig.tsbuildinfo
 !.env.example
 !.env.docker.example
 
+# ─── YouTube cookies (Clip Forge yt-dlp auth) — NEVER commit real cookies ────
+*cookies*.txt
+*cookies*.json
+youtube-cookies*
+
 # ─── Logs ─────────────────────────────────────────────────────────────────────
 logs/
 *.log

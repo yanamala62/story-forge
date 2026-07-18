@@ -1,7 +1,7 @@
 import http from 'http';
 import { createApp } from './app.js';
 import { config } from './config/index.js';
-import { connectDatabase, disconnectDatabase, EpisodeRepository } from '@storyforge/database';
+import { connectDatabase, disconnectDatabase, EpisodeRepository, ClipForgeProjectRepository } from '@storyforge/database';
 import { runBootTimeRetentionSweep } from './services/episode-retention.service.js';
 import { createLogger } from '@storyforge/shared';
 
@@ -21,6 +21,13 @@ async function bootstrap(): Promise<void> {
   const orphanedCount = await new EpisodeRepository().reconcileOrphanedEpisodes();
   if (orphanedCount > 0) {
     logger.warn(`Reconciled ${orphanedCount} orphaned episode(s) from a previous run`);
+  }
+
+  // Same reconciliation for Clip Forge projects orphaned mid-run — otherwise
+  // the UI spins on SOURCE_VALIDATING/PROCESSING forever after a restart.
+  const orphanedProjects = await new ClipForgeProjectRepository().reconcileOrphanedProjects();
+  if (orphanedProjects > 0) {
+    logger.warn(`Reconciled ${orphanedProjects} orphaned Clip Forge project(s) from a previous run`);
   }
 
   // Boot-time retention sweep: runs asynchronously so it never delays server startup.

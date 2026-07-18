@@ -8,6 +8,21 @@ import { createLogger, ExternalServiceError } from '@storyforge/shared';
 const execFileAsync = promisify(execFile);
 const logger = createLogger('ytdlp-provider');
 
+// yt-dlp's own network resilience — fail a stalled socket fast and retry a few
+// times, instead of the default behaviour where a dead connection can hang the
+// child process indefinitely (which showed up as the UI spinning forever on
+// "SOURCE VALIDATING"). Applied to every invocation.
+const NETWORK_ARGS = ['--socket-timeout', '30', '--retries', '5'];
+
+// Hard ceiling on the metadata call — it's a tiny JSON fetch; if it hasn't
+// returned in 90s something is wrong (bot-check hang, dead socket).
+const METADATA_TIMEOUT_MS = 90_000;
+
+// Hard ceiling on a single download attempt. Generous enough for a multi-hour
+// 1080p source on a slow host, but bounded so a stall becomes a clean FAILED
+// (resumable) rather than an infinite hang.
+const DOWNLOAD_TIMEOUT_MS = 45 * 60_000;
+
 export interface YtDlpVideoInfo {
   videoId: string;
   title: string;
@@ -100,11 +115,11 @@ async function runWithPlayerClientFallback<T>(
  */
 export async function getVideoInfo(binaryPath: string, url: string, cookiesPath?: string): Promise<YtDlpVideoInfo> {
   return runWithPlayerClientFallback(async (extraArgs) => {
-    const args = [url, '--dump-single-json', '--no-warnings', '--no-playlist', '--skip-download', ...extraArgs];
+    const args = [url, '--dump-single-json', '--no-warnings', '--no-playlist', '--skip-download', ...NETWORK_ARGS, ...extraArgs];
 
     let stdout: string;
     try {
-      ({ stdout } = await execFileAsync(binaryPath, args, { timeout: 60_000, maxBuffer: 20 * 1024 * 1024 }));
+      ({ stdout } = await execFileAsync(binaryPath, args, { timeout: METADATA_TIMEOUT_MS, maxBuffer: 20 * 1024 * 1024 }));
     } catch (error) {
       throw new ExternalServiceError(
         'yt-dlp',
@@ -157,11 +172,12 @@ export async function downloadVideo(
       '--no-playlist',
       '--no-warnings',
       '--no-progress',
+      ...NETWORK_ARGS,
       ...extraArgs,
     ];
 
     try {
-      await execFileAsync(binaryPath, args, { maxBuffer: 20 * 1024 * 1024 });
+      await execFileAsync(binaryPath, args, { timeout: DOWNLOAD_TIMEOUT_MS, maxBuffer: 20 * 1024 * 1024 });
     } catch (error) {
       throw new ExternalServiceError(
         'yt-dlp',
