@@ -110,6 +110,28 @@ export class ClipForgeProjectRepository extends BaseRepository {
   }
 
   /**
+   * Marks any project left in a transient/active status at boot as FAILED —
+   * it was orphaned by the previous process dying mid-run (crash, restart,
+   * deploy, OOM). Without this, such a project's UI spins on "SOURCE
+   * VALIDATING"/"PROCESSING" forever with no in-memory run backing it. FAILED
+   * is fully resumable (the pipeline is idempotent), so the user just clicks
+   * Resume/Retry. CONTINUITY_VALIDATION_FAILED / WAITING_FOR_YOUTUBE_QUOTA /
+   * PARTIALLY_COMPLETED are deliberately left alone — those are real resting
+   * states, not orphans.
+   */
+  async reconcileOrphanedProjects(): Promise<number> {
+    const result = await this.db.clipForgeProject.updateMany({
+      where: {
+        status: {
+          in: ['SOURCE_VALIDATING', 'SOURCE_READY', 'SPLIT_PLANNING', 'CONTINUITY_VALIDATING', 'PROCESSING', 'UPLOADING'],
+        },
+      },
+      data: { status: 'FAILED', failureReason: 'Interrupted by server restart — click Resume to continue', failedAt: new Date() },
+    });
+    return result.count;
+  }
+
+  /**
    * Frees the source-video storage reference once the whole project has
    * completed (every part successfully uploaded to YouTube) — the huge
    * source file no longer needs to exist locally or in Supabase Storage.
